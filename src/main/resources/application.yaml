@@ -1,0 +1,24 @@
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 514342237226-6kf495bld2ud832b5tesqsugokvcidf9.apps.googleusercontent.com
+            client-secret: lRK6c9PHmTZDnMaPTvgcHRhE
+          facebook:
+            client-id: 1048731185333188
+            client-secret: 8d9815e3951dff92140e91408f15910e
+
+logging:
+  level:
+    org.springframework.security: DEBUG
+
+cors:
+  origin: "http://localhost:4200"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ['*']
