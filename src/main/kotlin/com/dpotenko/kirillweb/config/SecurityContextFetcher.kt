@@ -4,13 +4,12 @@ import org.springframework.security.core.context.SecurityContext
 import org.springframework.security.web.context.HttpRequestResponseHolder
 import org.springframework.security.web.context.HttpSessionSecurityContextRepository
 import org.springframework.security.web.context.SecurityContextRepository
-import org.springframework.stereotype.Component
 import javax.servlet.http.Cookie
 import javax.servlet.http.HttpServletRequest
 import javax.servlet.http.HttpServletRequestWrapper
 import javax.servlet.http.HttpServletResponse
 
-        //@Component
+//@Component
 class SecurityContextFetcher() : SecurityContextRepository {
     private val httpSessionSecurityContextRepository: HttpSessionSecurityContextRepository = HttpSessionSecurityContextRepository()
 

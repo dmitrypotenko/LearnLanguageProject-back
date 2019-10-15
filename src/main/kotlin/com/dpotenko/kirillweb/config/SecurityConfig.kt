@@ -23,19 +23,19 @@ import javax.servlet.http.HttpServletResponse
 open class SecurityConfig : WebSecurityConfigurerAdapter() {
 
     override fun configure(http: HttpSecurity?) {
-        http!!.antMatcher("/**")
-                .authorizeRequests()
-                .antMatchers("/login**")
-                .permitAll()
-                .antMatchers("/isAdmin**")
+        http!!.authorizeRequests()
+                .antMatchers("/**")
                 .permitAll()
                 .and()
+                .csrf()
+                .disable()
                 .oauth2Client()
                 .and()
                 .oauth2Login()
                 .successHandler(SuccessRedirectHandler())
                 .userInfoEndpoint()
                 .oidcUserService(oidcUserService())
+                .and()
     }
 
     private fun oidcUserService(): OAuth2UserService<OidcUserRequest, OidcUser> {
