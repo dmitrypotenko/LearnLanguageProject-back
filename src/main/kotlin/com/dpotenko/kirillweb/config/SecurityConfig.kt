@@ -20,7 +20,7 @@ import javax.servlet.http.HttpServletResponse
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
-open class SecurityConfig : WebSecurityConfigurerAdapter() {
+class SecurityConfig : WebSecurityConfigurerAdapter() {
 
     override fun configure(http: HttpSecurity?) {
         http!!.authorizeRequests()
@@ -41,7 +41,6 @@ open class SecurityConfig : WebSecurityConfigurerAdapter() {
     private fun oidcUserService(): OAuth2UserService<OidcUserRequest, OidcUser> {
         val delegate = OidcUserService()
         return OAuth2UserService { userRequest ->
-            println("FFFFFFFFFFFFFFFFFFFFFFFFFFFFF!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!")
             var oidcUser = delegate.loadUser(userRequest)
             val email = oidcUser.attributes["email"] as String
 
