@@ -44,7 +44,7 @@ class SecurityConfig : WebSecurityConfigurerAdapter() {
             var oidcUser = delegate.loadUser(userRequest)
             val email = oidcUser.attributes["email"] as String
 
-            if (email == "gman.dima@googlemail.com") {
+            if (email == "gman.dima@googlemail.com" || email == "andrew.golovach25@gmail.com") {
                 return@OAuth2UserService DefaultOidcUser(setOf(OAuth2UserAuthority("ROLE_ADMIN", mapOf("" to Any()))), oidcUser.getIdToken(), oidcUser.getUserInfo())
             }
             oidcUser

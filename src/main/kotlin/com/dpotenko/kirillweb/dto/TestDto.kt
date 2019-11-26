@@ -4,5 +4,5 @@ data class TestDto(
         val questions: List<QuestionDto>,
         val name: String,
         val order: Long,
-        val id: Long
+        var id: Long?
 )

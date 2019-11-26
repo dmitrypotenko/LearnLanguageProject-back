@@ -10,7 +10,12 @@ spring:
             client-id: 1048731185333188
             client-secret: 8d9815e3951dff92140e91408f15910e
 
-logging:
+
+  datasource:
+    driver-class-name=com: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/principal
+    username: root
+    password: 1111
   level:
     org.springframework.security: DEBUG
 
@@ -25,3 +30,4 @@ management:
 
 server:
   port: 8080
+

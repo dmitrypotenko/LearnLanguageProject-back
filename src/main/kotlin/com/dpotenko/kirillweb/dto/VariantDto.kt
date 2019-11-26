@@ -1,9 +1,11 @@
 package com.dpotenko.kirillweb.dto
 
+import com.fasterxml.jackson.annotation.JsonProperty
+
 data class VariantDto(
-        val variantText: String,
+        val variant: String,
         val isRight: Boolean,
         val isWrong: Boolean,
         val isTicked: Boolean,
-        val id: Long
+        var id: Long?
 )
