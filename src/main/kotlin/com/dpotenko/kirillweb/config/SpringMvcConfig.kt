@@ -11,7 +11,7 @@ import kotlin.math.log
 @EnableWebMvc
 @Configuration
 class SpringMvcConfig(val corsProperties: CorsProperties) : WebMvcConfigurer {
-    override fun addCorsMappings(registry: CorsRegistry) {
+    override fun addCorsMappings(registry: CorsRegistry) { //TODO change in prod
         registry.addMapping("/**")
                 .allowedOrigins(corsProperties.origin)
                 .allowedHeaders("*")

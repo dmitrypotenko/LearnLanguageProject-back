@@ -27,7 +27,7 @@ class SecurityConfig : WebSecurityConfigurerAdapter() {
                 .antMatchers("/**")
                 .permitAll()
                 .and()
-                .csrf()
+                .csrf()  //TODO enable in prod
                 .disable()
                 .oauth2Client()
                 .and()

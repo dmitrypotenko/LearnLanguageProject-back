@@ -22,10 +22,5 @@ class CourseController(val courseService: CourseService) {
         return ResponseEntity.ok(course)
     }
 
-    @GetMapping
-    fun test(): ResponseEntity<String> {
-        return ResponseEntity.ok("ok")
-    }
-
 
 }
