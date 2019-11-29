@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component
 class VariantService(val dslContext: DSLContext) {
     fun saveVariant(dto: VariantDto,
                     questionId: Long): Long {
-        val record = dslContext.newRecord(Tables.VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.isRight, dto.variant, null, questionId))
+        val record = dslContext.newRecord(Tables.VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.isRight, dto.variant, null, questionId, false))
         if (dto.id == null) {
             record.insert()
         } else {
@@ -18,6 +18,19 @@ class VariantService(val dslContext: DSLContext) {
         }
 
         return record.id
+    }
+
+    fun merge(variants: List<VariantDto>,
+              questionId: Long) {
+        dslContext.selectFrom(Tables.VARIANT)
+                .where(Tables.VARIANT.QUESTION_ID.eq(questionId))
+                .fetch()
+                .forEach { variantRecord ->
+                    if (variants.find { it.id == variantRecord.id } == null) {
+                        variantRecord.deleted = true
+                        variantRecord.store()
+                    }
+                }
     }
 
 }

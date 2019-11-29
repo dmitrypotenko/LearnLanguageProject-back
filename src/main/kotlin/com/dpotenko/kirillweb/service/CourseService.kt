@@ -14,7 +14,7 @@ class CourseService(val lessonService: LessonService,
                     val attachmentService: AttachmentService,
                     val dslContext: DSLContext) {
     fun saveCourse(dto: CourseDto): CourseDto {
-        val course = dslContext.newRecord(Tables.COURSE, Course(dto.name, dto.category, dto.description, dto.id))
+        val course = dslContext.newRecord(Tables.COURSE, Course(dto.name, dto.category, dto.description, dto.id, false))
 
         if (dto.id == null || dto.id == 0L) {
             course.insert()
@@ -22,12 +22,13 @@ class CourseService(val lessonService: LessonService,
             course.update()
         }
         dto.id = course.id
-        dto.lessons.forEach {
-            it.id = lessonService.saveLesson(it, course.id)
-            it.attachments.forEach { attachmentDto ->
-                attachmentDto.id = attachmentService.saveAttachment(attachmentDto, it.id)
+        dto.lessons.forEach { lesson ->
+            lesson.id = lessonService.saveLesson(lesson, course.id)
+            lesson.attachments.forEach { attachmentDto ->
+                attachmentDto.id = attachmentService.saveAttachment(attachmentDto, lesson.id!!)
             }
         }
+
         dto.tests.forEach { it.id = testService.saveTest(it, course.id) }
         dto.tests.forEach { testDto ->
             testDto.questions.forEach { questionDto ->
@@ -35,6 +36,9 @@ class CourseService(val lessonService: LessonService,
                 questionDto.variants.forEach { variantDto -> variantDto.id = variantService.saveVariant(variantDto, questionDto.id!!) }
             }
         }
+
+        lessonService.merge(dto.lessons, course.id)
+        testService.merge(dto.tests, course.id)
 
         return dto
     }

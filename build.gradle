@@ -96,7 +96,7 @@ jooq {
                     forcedType {
                         userType = 'com.dpotenko.kirillweb.dto.QuestionType'
                         converter  = 'com.dpotenko.kirillweb.converter.QuestionTypeConverter'
-                        expression = 'type'
+                        expression = 'type|slkdfj|sdjklfljsdflj'
                     }
                 }
                 // ...

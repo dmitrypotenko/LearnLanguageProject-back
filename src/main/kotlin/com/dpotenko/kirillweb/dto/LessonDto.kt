@@ -6,5 +6,5 @@ data class LessonDto(
         val name: String?,
         val attachments: List<AttachmentDto>,
         val order: Long,
-        var id: Long
+        var id: Long?
 )
