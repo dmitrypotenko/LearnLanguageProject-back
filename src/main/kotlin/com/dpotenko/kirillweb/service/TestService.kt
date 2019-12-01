@@ -25,7 +25,7 @@ class TestService(val dslContext: DSLContext,
     fun merge(tests: List<TestDto>,
               courseId: Long) {
         dslContext.selectFrom(Tables.TEST)
-                .where(Tables.TEST.COURSE_ID.eq(courseId))
+                .where(Tables.TEST.COURSE_ID.eq(courseId).and(Tables.TEST.DELETED.eq(false)))
                 .fetch()
                 .forEach { testRecord ->
                     val foundTest = tests.find { it.id == testRecord.id }
@@ -36,5 +36,26 @@ class TestService(val dslContext: DSLContext,
                         questionService.merge(foundTest.questions, foundTest.id!!)
                     }
                 }
+    }
+
+    fun getTestsByCourseId(courseId: Long): List<TestDto> {
+        val tests = dslContext.selectFrom(Tables.TEST)
+                .where(Tables.TEST.COURSE_ID.eq(courseId).and(Tables.TEST.DELETED.eq(false)))
+                .fetchInto(Test::class.java)
+
+        val testsDto = tests.map { mapTestToDto(it) }
+
+        testsDto.forEach { testDto -> testDto.questions = questionService.getQuestionsByTestId(testDto.id!!) }
+
+        return testsDto
+    }
+
+    private fun mapTestToDto(test: Test): TestDto {
+        return TestDto(
+                listOf(),
+                test.name,
+                test.orderNumber.toLong(),
+                test.id
+        )
     }
 }

@@ -24,7 +24,7 @@ class QuestionService(val dslContext: DSLContext,
     fun merge(questions: List<QuestionDto>,
               testId: Long) {
         dslContext.selectFrom(Tables.QUESTION)
-                .where(Tables.QUESTION.TEST_ID.eq(testId))
+                .where(Tables.QUESTION.TEST_ID.eq(testId).and(Tables.QUESTION.DELETED.eq(false)))
                 .fetch()
                 .forEach { questionRecord ->
                     val foundQuestion = questions.find { it.id == questionRecord.id }
@@ -35,5 +35,27 @@ class QuestionService(val dslContext: DSLContext,
                         variantService.merge(foundQuestion.variants, foundQuestion.id!!)
                     }
                 }
+    }
+
+
+    fun getQuestionsByTestId(testId: Long): List<QuestionDto> {
+        val questions = dslContext.selectFrom(Tables.QUESTION)
+                .where(Tables.QUESTION.TEST_ID.eq(testId).and(Tables.QUESTION.DELETED.eq(false)))
+                .fetchInto(Question::class.java)
+
+        val dtos = questions.map { mapQuestionToDto(it) }
+
+        dtos.forEach { questionDto -> questionDto.variants = variantService.getVariantsByQuestionId(questionDto.id!!) }
+
+        return dtos
+    }
+
+    private fun mapQuestionToDto(question: Question): QuestionDto {
+        return QuestionDto(
+                question.questionText,
+                listOf(),
+                question.type,
+                question.id
+        )
     }
 }

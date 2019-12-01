@@ -24,7 +24,7 @@ class AttachmentService(val dslContext: DSLContext) {
     fun merge(attachments: List<AttachmentDto>,
               lessonId: Long) {
         dslContext.selectFrom(Tables.ATTACHMENT)
-                .where(Tables.ATTACHMENT.LESSON_ID.eq(lessonId))
+                .where(Tables.ATTACHMENT.LESSON_ID.eq(lessonId).and(Tables.ATTACHMENT.DELETED.eq(false)))
                 .fetch()
                 .forEach { attachmentRecord ->
                     if (attachments.find { it.id == attachmentRecord.id } == null) {
@@ -32,5 +32,21 @@ class AttachmentService(val dslContext: DSLContext) {
                         attachmentRecord.store()
                     }
                 }
+    }
+
+    fun getAttachmentsByLessonId(lessonId: Long): List<AttachmentDto> {
+        val attachments = dslContext.selectFrom(Tables.ATTACHMENT)
+                .where(Tables.ATTACHMENT.LESSON_ID.eq(lessonId).and(Tables.ATTACHMENT.DELETED.eq(false)))
+                .fetchInto(Attachment::class.java)
+
+        return attachments.map { mapAttachmentToDto(it) }
+    }
+
+    private fun mapAttachmentToDto(attachment: Attachment) : AttachmentDto {
+        return AttachmentDto(
+                attachment.attachmentLink,
+                attachment.attachmentTitle,
+                attachment.id
+        )
     }
 }

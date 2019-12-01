@@ -42,4 +42,35 @@ class CourseService(val lessonService: LessonService,
 
         return dto
     }
+
+
+    fun getAllCourses(): List<CourseDto> {
+        val courses = dslContext.selectFrom(Tables.COURSE)
+                .where(Tables.COURSE.DELETED.eq(false))
+                .fetchInto(Course::class.java)
+        return courses.map { mapCourseToDto(it) }
+    }
+
+    fun getCourseById(id: Long): CourseDto {
+        val course = dslContext.selectFrom(Tables.COURSE)
+                .where(Tables.COURSE.DELETED.eq(false).and(Tables.COURSE.ID.eq(id)))
+                .fetchOneInto(Course::class.java)
+        val dto = mapCourseToDto(course)
+
+        dto.lessons = lessonService.getLessonsByCourseId(id)
+        dto.tests = testService.getTestsByCourseId(id)
+
+        return dto
+    }
+
+    private fun mapCourseToDto(course: Course) : CourseDto {
+        return CourseDto(
+                course.name,
+                course.description,
+                course.category,
+                emptyList(),
+                emptyList(),
+                course.id
+        )
+    }
 }

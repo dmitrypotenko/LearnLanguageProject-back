@@ -23,7 +23,7 @@ class VariantService(val dslContext: DSLContext) {
     fun merge(variants: List<VariantDto>,
               questionId: Long) {
         dslContext.selectFrom(Tables.VARIANT)
-                .where(Tables.VARIANT.QUESTION_ID.eq(questionId))
+                .where(Tables.VARIANT.QUESTION_ID.eq(questionId).and(Tables.VARIANT.DELETED.eq(false)))
                 .fetch()
                 .forEach { variantRecord ->
                     if (variants.find { it.id == variantRecord.id } == null) {
@@ -31,6 +31,24 @@ class VariantService(val dslContext: DSLContext) {
                         variantRecord.store()
                     }
                 }
+    }
+
+
+    fun getVariantsByQuestionId(questionId: Long): List<VariantDto> {
+        return dslContext.selectFrom(Tables.VARIANT)
+                .where(Tables.VARIANT.QUESTION_ID.eq(questionId).and(Tables.VARIANT.DELETED.eq(false)))
+                .fetchInto(Variant::class.java)
+                .map { mapVariantToDto(it) }
+    }
+
+    private fun mapVariantToDto(variant: Variant): VariantDto {
+        return VariantDto(
+                variant.variantText,
+                variant.right,
+                variant.wrong,
+                variant.ticked,
+                variant.id
+        )
     }
 
 }
