@@ -63,7 +63,7 @@ class CourseService(val lessonService: LessonService,
         return dto
     }
 
-    private fun mapCourseToDto(course: Course) : CourseDto {
+    private fun mapCourseToDto(course: Course): CourseDto {
         return CourseDto(
                 course.name,
                 course.description,
@@ -72,5 +72,12 @@ class CourseService(val lessonService: LessonService,
                 emptyList(),
                 course.id
         )
+    }
+
+    fun deleteCourseById(courseId: Long) {
+        dslContext.update(Tables.COURSE)
+                .set(Tables.COURSE.DELETED, true)
+                .where(Tables.COURSE.ID.eq(courseId))
+                .execute()
     }
 }

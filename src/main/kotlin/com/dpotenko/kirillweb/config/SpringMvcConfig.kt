@@ -15,6 +15,7 @@ class SpringMvcConfig(val corsProperties: CorsProperties) : WebMvcConfigurer {
         registry.addMapping("/**")
                 .allowedOrigins(corsProperties.origin)
                 .allowedHeaders("*")
+                .allowedMethods("*")
                 .allowCredentials(true)
 
     }

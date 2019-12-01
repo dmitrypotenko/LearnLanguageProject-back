@@ -4,6 +4,7 @@ import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.service.CourseService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.web.bind.annotation.DeleteMapping
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -32,5 +33,10 @@ class CourseController(val courseService: CourseService) {
     fun getCourse(@PathVariable("id") id: Long): ResponseEntity<CourseDto> {
         val course = courseService.getCourseById(id)
         return ResponseEntity.ok(course)
+    }
+
+    @DeleteMapping("/{id}")
+    fun deleteCourse(@PathVariable("id") id: Long) {
+        courseService.deleteCourseById(id)
     }
 }
