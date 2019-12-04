@@ -36,6 +36,7 @@ class CourseController(val courseService: CourseService) {
     }
 
     @DeleteMapping("/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun deleteCourse(@PathVariable("id") id: Long) {
         courseService.deleteCourseById(id)
     }

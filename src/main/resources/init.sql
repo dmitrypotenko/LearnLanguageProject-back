@@ -69,3 +69,15 @@ create table if not exists variant
 		foreign key (question_id) references question (id)
 );
 
+alter table attachment
+    add deleted boolean default false null;
+alter table course
+    add deleted boolean default false null;
+alter table lesson
+    add deleted boolean default false null;
+alter table question
+    add deleted boolean default false null;
+alter table test
+    add deleted boolean default false null;
+alter table variant
+    add deleted boolean default false null;
