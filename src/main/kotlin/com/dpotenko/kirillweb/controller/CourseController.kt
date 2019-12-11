@@ -35,6 +35,13 @@ class CourseController(val courseService: CourseService) {
         return ResponseEntity.ok(course)
     }
 
+    @GetMapping("/edit/{id}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun getCourseForEdit(@PathVariable("id") id: Long): ResponseEntity<CourseDto> {
+        val course = courseService.getCourseByIdForEdit(id)
+        return ResponseEntity.ok(course)
+    }
+
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun deleteCourse(@PathVariable("id") id: Long) {

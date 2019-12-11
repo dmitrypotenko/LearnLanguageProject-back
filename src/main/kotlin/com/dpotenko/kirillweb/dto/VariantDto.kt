@@ -7,10 +7,10 @@ data class VariantDto(
         val variant: String,
         @param:JsonProperty("isRight")
         @get:JsonProperty("isRight")
-        val isRight: Boolean,
+        var isRight: Boolean,
         @get:JsonProperty("isWrong")
-        val isWrong: Boolean,
+        var isWrong: Boolean,
         @get:JsonProperty("isTicked")
-        val isTicked: Boolean,
+        var isTicked: Boolean,
         var id: Long?
 )

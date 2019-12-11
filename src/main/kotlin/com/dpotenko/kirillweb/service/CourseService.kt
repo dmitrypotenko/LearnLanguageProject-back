@@ -52,6 +52,19 @@ class CourseService(val lessonService: LessonService,
     }
 
     fun getCourseById(id: Long): CourseDto {
+        val courseDto = getCourseByIdForEdit(id)
+        courseDto.tests.forEach { test ->
+            test.questions.forEach { question ->
+                question.variants.forEach {
+                    it.isRight = false
+                }
+            }
+        }
+
+        return courseDto
+    }
+
+    fun getCourseByIdForEdit(id: Long): CourseDto {
         val course = dslContext.selectFrom(Tables.COURSE)
                 .where(Tables.COURSE.DELETED.eq(false).and(Tables.COURSE.ID.eq(id)))
                 .fetchOneInto(Course::class.java)
