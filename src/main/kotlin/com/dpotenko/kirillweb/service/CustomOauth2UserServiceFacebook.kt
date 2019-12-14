@@ -3,19 +3,15 @@ package com.dpotenko.kirillweb.service
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.domain.OAuth2AuthenticationProcessingException
 import com.dpotenko.kirillweb.domain.UserPrincipal
-import com.dpotenko.kirillweb.domain.UserPrincipalFacebook
 import com.dpotenko.kirillweb.domain.oauth.OAuth2UserInfo
 import com.dpotenko.kirillweb.tables.pojos.User
 import com.dpotenko.kirillweb.util.OAuth2UserInfoFactory
 import org.jooq.DSLContext
 import org.springframework.security.authentication.InternalAuthenticationServiceException
 import org.springframework.security.core.AuthenticationException
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
-import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
 import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService
-import org.springframework.security.oauth2.core.oidc.user.OidcUser
 import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Component
 import org.springframework.util.StringUtils
@@ -54,12 +50,12 @@ class CustomOauth2UserServiceFacebook(private val dslContext: DSLContext) : OAut
             user = registerNewUser(oAuth2UserRequest, oAuth2UserInfo)
         }
 
-        return user?.let { UserPrincipalFacebook.create(it, oAuth2User.attributes) }!!
+        return user?.let { UserPrincipal.create(it, oAuth2User.attributes) }!!
     }
 
     private fun registerNewUser(oAuth2UserRequest: OAuth2UserRequest, oAuth2UserInfo: OAuth2UserInfo?): User? {
         val user = User(null, oAuth2UserInfo?.name, oAuth2UserInfo?.email, null, oAuth2UserRequest.clientRegistration
-                .registrationId, oAuth2UserInfo?.id, "ROLES_USER", oAuth2UserInfo?.imageUrl)
+                .registrationId, oAuth2UserInfo?.id, "ROLE_USER", oAuth2UserInfo?.imageUrl)
 
         val record = dslContext.newRecord(Tables.USER, user)
         record.insert()

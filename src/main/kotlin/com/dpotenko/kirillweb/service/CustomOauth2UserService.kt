@@ -2,7 +2,7 @@ package com.dpotenko.kirillweb.service
 
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.domain.OAuth2AuthenticationProcessingException
-import com.dpotenko.kirillweb.domain.UserPrincipal
+import com.dpotenko.kirillweb.domain.OidUserPrincipal
 import com.dpotenko.kirillweb.domain.oauth.OAuth2UserInfo
 import com.dpotenko.kirillweb.tables.pojos.User
 import com.dpotenko.kirillweb.util.OAuth2UserInfoFactory
@@ -53,7 +53,7 @@ class CustomOauth2UserService(private val dslContext: DSLContext) : OAuth2UserSe
             user = registerNewUser(oAuth2UserRequest, oAuth2UserInfo)
         }
 
-        return user?.let { UserPrincipal.create(it, oidcUser) }!!
+        return user?.let { OidUserPrincipal.create(it, oidcUser) }!!
     }
 
     private fun registerNewUser(oAuth2UserRequest: OAuth2UserRequest,

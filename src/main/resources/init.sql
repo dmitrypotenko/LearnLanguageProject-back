@@ -74,7 +74,7 @@ create table if not exists user
     id bigint auto_increment
         primary key,
     name varchar(256) null,
-    email varchar(256) not null,
+    email varchar(256) null,
     password varchar(256) null,
     auth_provider varchar(256) null,
     auth_provider_id varchar(256) null,
