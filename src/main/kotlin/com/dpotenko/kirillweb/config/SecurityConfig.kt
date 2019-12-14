@@ -1,5 +1,6 @@
 package com.dpotenko.kirillweb.config
 
+import com.dpotenko.kirillweb.service.CustomOauth2UserService
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -20,7 +21,7 @@ import javax.servlet.http.HttpServletResponse
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
-class SecurityConfig : WebSecurityConfigurerAdapter() {
+class SecurityConfig(val oauth2UserService : CustomOauth2UserService) : WebSecurityConfigurerAdapter() {
 
     override fun configure(http: HttpSecurity?) {
         http!!.authorizeRequests()
@@ -34,6 +35,7 @@ class SecurityConfig : WebSecurityConfigurerAdapter() {
                 .oauth2Login()
                 .successHandler(SuccessRedirectHandler())
                 .userInfoEndpoint()
+//                .userService(oauth2UserService)
                 .oidcUserService(oidcUserService())
                 .and()
     }
@@ -57,8 +59,6 @@ class SuccessRedirectHandler : SimpleUrlAuthenticationSuccessHandler() {
     override fun onAuthenticationSuccess(request: HttpServletRequest?,
                                          response: HttpServletResponse?,
                                          authentication: Authentication?) {
-
-
         redirectStrategy.sendRedirect(request, response, "http://localhost:4200/welcome")
     }
 }

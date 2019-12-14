@@ -69,6 +69,19 @@ create table if not exists variant
 		foreign key (question_id) references question (id)
 );
 
+create table if not exists user
+(
+    id bigint auto_increment
+        primary key,
+    name varchar(256) null,
+    email varchar(256) not null,
+    password varchar(256) null,
+    auth_provider varchar(256) null,
+    auth_provider_id varchar(256) null,
+    role varchar(256) not null,
+    imageUrl varchar(256) null
+);
+
 alter table attachment
     add deleted boolean default false null;
 alter table course
