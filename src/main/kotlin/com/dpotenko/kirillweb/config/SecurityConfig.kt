@@ -1,6 +1,7 @@
 package com.dpotenko.kirillweb.config
 
 import com.dpotenko.kirillweb.service.CustomOauth2UserService
+import com.dpotenko.kirillweb.service.CustomOauth2UserServiceFacebook
 import org.springframework.context.annotation.Configuration
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
 import org.springframework.security.config.annotation.web.builders.HttpSecurity
@@ -21,7 +22,8 @@ import javax.servlet.http.HttpServletResponse
 @Configuration
 @EnableWebSecurity
 @EnableGlobalMethodSecurity(securedEnabled = true, prePostEnabled = true)
-class SecurityConfig(val oauth2UserService : CustomOauth2UserService) : WebSecurityConfigurerAdapter() {
+class SecurityConfig(val oauth2UserService: CustomOauth2UserService,
+                     val customOauth2UserServiceFacebook: CustomOauth2UserServiceFacebook) : WebSecurityConfigurerAdapter() {
 
     override fun configure(http: HttpSecurity?) {
         http!!.authorizeRequests()
@@ -35,8 +37,8 @@ class SecurityConfig(val oauth2UserService : CustomOauth2UserService) : WebSecur
                 .oauth2Login()
                 .successHandler(SuccessRedirectHandler())
                 .userInfoEndpoint()
-//                .userService(oauth2UserService)
-                .oidcUserService(oidcUserService())
+                .userService(customOauth2UserServiceFacebook)
+                .oidcUserService(oauth2UserService)
                 .and()
     }
 

@@ -3,6 +3,7 @@ package com.dpotenko.kirillweb.service
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.domain.OAuth2AuthenticationProcessingException
 import com.dpotenko.kirillweb.domain.UserPrincipal
+import com.dpotenko.kirillweb.domain.UserPrincipalFacebook
 import com.dpotenko.kirillweb.domain.oauth.OAuth2UserInfo
 import com.dpotenko.kirillweb.tables.pojos.User
 import com.dpotenko.kirillweb.util.OAuth2UserInfoFactory
@@ -11,17 +12,19 @@ import org.springframework.security.authentication.InternalAuthenticationService
 import org.springframework.security.core.AuthenticationException
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserRequest
 import org.springframework.security.oauth2.client.oidc.userinfo.OidcUserService
+import org.springframework.security.oauth2.client.userinfo.DefaultOAuth2UserService
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserRequest
 import org.springframework.security.oauth2.client.userinfo.OAuth2UserService
 import org.springframework.security.oauth2.core.oidc.user.OidcUser
+import org.springframework.security.oauth2.core.user.OAuth2User
 import org.springframework.stereotype.Component
 import org.springframework.util.StringUtils
 
 @Component
-class CustomOauth2UserService(private val dslContext: DSLContext) : OAuth2UserService<OidcUserRequest, OidcUser> {
-    private val delegate: OidcUserService = OidcUserService()
+class CustomOauth2UserServiceFacebook(private val dslContext: DSLContext) : OAuth2UserService<OAuth2UserRequest, OAuth2User> {
+    private val delegate: DefaultOAuth2UserService = DefaultOAuth2UserService()
 
-    override fun loadUser(userRequest: OidcUserRequest?): OidcUser {
+    override fun loadUser(userRequest: OAuth2UserRequest?): OAuth2User {
         val oAuth2User = delegate.loadUser(userRequest)
 
         return try {
@@ -29,20 +32,18 @@ class CustomOauth2UserService(private val dslContext: DSLContext) : OAuth2UserSe
         } catch (ex: AuthenticationException) {
             throw ex
         } catch (ex: Exception) { // Throwing an instance of AuthenticationException will trigger the OAuth2AuthenticationFailureHandler
-            ex.printStackTrace()
             throw InternalAuthenticationServiceException(ex.message, ex.cause)
         }
     }
 
-    private fun processOAuth2User(oAuth2UserRequest: OAuth2UserRequest,
-                                  oidcUser: OidcUser): OidcUser {
+    private fun processOAuth2User(oAuth2UserRequest: OAuth2UserRequest, oAuth2User: OAuth2User): OAuth2User {
         val oAuth2UserInfo: OAuth2UserInfo? =
-                OAuth2UserInfoFactory.getOAuth2UserInfo(oAuth2UserRequest.clientRegistration.registrationId, oidcUser.attributes)
-        if (StringUtils.isEmpty(oAuth2UserInfo?.email)) {
-            throw OAuth2AuthenticationProcessingException("Email not found from OAuth2 provider")
+                OAuth2UserInfoFactory.getOAuth2UserInfo(oAuth2UserRequest.clientRegistration.registrationId, oAuth2User.attributes)
+        if (StringUtils.isEmpty(oAuth2UserInfo?.id)) {
+            throw OAuth2AuthenticationProcessingException("Facebook id not found from OAuth2 provider")
         }
 
-        var user: User? = findUserByEmail(oAuth2UserInfo?.email)
+        var user: User? = findUserByFacebookId(oAuth2UserInfo?.id)
         if (user != null) {
             if (!user.authProvider.equals(oAuth2UserRequest.clientRegistration.registrationId)) {
                 throw OAuth2AuthenticationProcessingException("Looks like you're signed up with " + user.authProvider
@@ -53,13 +54,12 @@ class CustomOauth2UserService(private val dslContext: DSLContext) : OAuth2UserSe
             user = registerNewUser(oAuth2UserRequest, oAuth2UserInfo)
         }
 
-        return user?.let { UserPrincipal.create(it, oidcUser) }!!
+        return user?.let { UserPrincipalFacebook.create(it, oAuth2User.attributes) }!!
     }
 
-    private fun registerNewUser(oAuth2UserRequest: OAuth2UserRequest,
-                                oAuth2UserInfo: OAuth2UserInfo?): User? {
+    private fun registerNewUser(oAuth2UserRequest: OAuth2UserRequest, oAuth2UserInfo: OAuth2UserInfo?): User? {
         val user = User(null, oAuth2UserInfo?.name, oAuth2UserInfo?.email, null, oAuth2UserRequest.clientRegistration
-                .registrationId, oAuth2UserInfo?.id, "ROLE_USER", oAuth2UserInfo?.imageUrl)
+                .registrationId, oAuth2UserInfo?.id, "ROLES_USER", oAuth2UserInfo?.imageUrl)
 
         val record = dslContext.newRecord(Tables.USER, user)
         record.insert()
@@ -68,8 +68,7 @@ class CustomOauth2UserService(private val dslContext: DSLContext) : OAuth2UserSe
         return user
     }
 
-    private fun updateExistingUser(existingUser: User,
-                                   oAuth2UserInfo: OAuth2UserInfo?): User? {
+    private fun updateExistingUser(existingUser: User, oAuth2UserInfo: OAuth2UserInfo?): User? {
         existingUser.name = oAuth2UserInfo?.name
         existingUser.imageurl = oAuth2UserInfo?.imageUrl
 
@@ -78,9 +77,9 @@ class CustomOauth2UserService(private val dslContext: DSLContext) : OAuth2UserSe
         return existingUser
     }
 
-    private fun findUserByEmail(email: String?): User? {
+    private fun findUserByFacebookId(facebookId: String?): User? {
         return dslContext.selectFrom(Tables.USER)
-                .where(Tables.USER.EMAIL.eq(email))
+                .where(Tables.USER.AUTH_PROVIDER_ID.eq(facebookId))
                 .fetchOneInto(User::class.java)
     }
 }
