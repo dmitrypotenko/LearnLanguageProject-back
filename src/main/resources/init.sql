@@ -94,3 +94,40 @@ alter table test
     add deleted boolean default false null;
 alter table variant
     add deleted boolean default false null;
+
+
+    create table if not exists principal.completed_lesson
+(
+	user_id bigint null,
+	lesson_id bigint null,
+	id bigint auto_increment
+		primary key,
+	constraint completed_lesson_lesson_id_fk
+		foreign key (lesson_id) references principal.lesson (id),
+	constraint completed_lesson_user_id_fk
+		foreign key (user_id) references principal.user (id)
+);
+
+create table if not exists principal.completed_test
+(
+	user_id bigint null,
+	test_id bigint null,
+	id int auto_increment
+		primary key,
+	constraint submitted_test_test_id_fk
+		foreign key (test_id) references principal.test (id),
+	constraint submitted_test_user_id_fk
+		foreign key (user_id) references principal.user (id)
+);
+
+create table if not exists principal.started_course
+(
+	id bigint auto_increment
+		primary key,
+	user_id bigint null,
+	course_id bigint null,
+	constraint started_course_course_id_fk
+		foreign key (course_id) references principal.course (id),
+	constraint started_course_user_id_fk
+		foreign key (user_id) references principal.user (id)
+);

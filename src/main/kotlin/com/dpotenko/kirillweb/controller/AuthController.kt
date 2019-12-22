@@ -19,8 +19,8 @@ class AuthController {
     }
 
     @GetMapping(path = ["/isAdmin"])
-    fun isAllowed(@AuthenticationPrincipal userPrincipal: UserPrincipal): String {
-        if (userPrincipal.isAdmin()) {
+    fun isAllowed(@AuthenticationPrincipal userPrincipal: UserPrincipal?): String {
+        if (userPrincipal != null && userPrincipal.isAdmin()) {
             return "true"
         }
 

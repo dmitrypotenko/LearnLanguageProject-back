@@ -7,4 +7,6 @@ data class CourseDto(
         var lessons: List<LessonDto>,
         var tests: List<TestDto>,
         var id: Long?
-)
+) {
+    var completion: CompletionDto? = null
+}
