@@ -63,12 +63,21 @@ class CourseService(val lessonService: LessonService,
         setCompletion(courseDto, userId)
         userId?.let { markAsStarted(userId, courseDto.id!!) }
         courseDto.tests.forEach { test ->
-            test.questions.forEach { question ->
-                question.variants.forEach {
-                    it.isRight = false
+            if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
+                for (question in test.questions) {
+                    variantService.getChosenVariantsForQuestion(question.id!!, userId).forEach { variant -> question.variants.find { it.id == variant.id }?.isTicked = true }
+                }
+                testService.checkTest(test)
+            } else {
+                test.questions.forEach { question ->
+                    question.variants.forEach {
+                        it.isRight = false
+                    }
                 }
             }
+
         }
+
 
         return courseDto
     }

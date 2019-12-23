@@ -5,4 +5,6 @@ data class TestDto(
         val name: String,
         val order: Long,
         var id: Long?
-)
+) {
+    var completion: CompletionDto? = null
+}

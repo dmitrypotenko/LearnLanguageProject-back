@@ -4,13 +4,15 @@ import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.dto.QuestionStatus
 import com.dpotenko.kirillweb.dto.TestDto
 import com.dpotenko.kirillweb.dto.VariantDto
+import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Test
 import org.jooq.DSLContext
 import org.springframework.stereotype.Component
 
 @Component
 class TestService(val dslContext: DSLContext,
-                  val questionService: QuestionService) {
+                  val questionService: QuestionService,
+                  val variantService: VariantService) {
 
     fun saveTest(dto: TestDto,
                  courseId: Long): Long {
@@ -71,6 +73,27 @@ class TestService(val dslContext: DSLContext,
         }
 
         return userTestDto
+    }
+
+    fun markAsCompleted(testDto: TestDto,
+                        userId: Long) {
+        val existingRecord = getCompletedTest(userId, testDto.id!!)
+        if (existingRecord == null) {
+            val completedTest = CompletedTest()
+            completedTest.userId = userId
+            completedTest.testId = testDto.id
+            val newRecord = dslContext.newRecord(Tables.COMPLETED_TEST, completedTest)
+            newRecord.insert()
+            testDto.questions.forEach { question -> question.variants.filter { it.isTicked }.forEach { variantService.markAsChosenVariant(userId, it.id!!) } }
+        }
+    }
+
+    fun getCompletedTest(userId: Long,
+                                 testId: Long): CompletedTest? {
+        return dslContext.selectFrom(Tables.COMPLETED_TEST.join(Tables.TEST).on(Tables.COMPLETED_TEST.TEST_ID.eq(Tables.TEST.ID)))
+                .where(Tables.TEST.DELETED.eq(false).and(Tables.TEST.ID.eq(testId))
+                        .and(Tables.COMPLETED_TEST.USER_ID.eq(userId)))
+                .fetchOneInto(CompletedTest::class.java)
     }
 
     private fun checkAnsweredCorrectly(userVariants: List<VariantDto>,

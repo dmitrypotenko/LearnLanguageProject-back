@@ -131,3 +131,15 @@ create table if not exists principal.started_course
 	constraint started_course_user_id_fk
 		foreign key (user_id) references principal.user (id)
 );
+
+create table if not exists principal.chosen_variant
+(
+	user_id bigint null,
+	variant_id bigint null,
+	id bigint auto_increment
+		primary key,
+	constraint chosen_variants_user_id_fk
+		foreign key (user_id) references principal.user (id),
+	constraint chosen_variants_variant_id_fk
+		foreign key (variant_id) references principal.variant (id)
+);
