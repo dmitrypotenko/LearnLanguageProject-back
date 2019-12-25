@@ -6,5 +6,5 @@ data class TestDto(
         val order: Long,
         var id: Long?
 ) {
-    var completion: CompletionDto? = null
+    var isCompleted: Boolean = false
 }

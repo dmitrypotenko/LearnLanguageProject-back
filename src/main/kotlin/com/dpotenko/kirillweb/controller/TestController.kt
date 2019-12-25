@@ -16,6 +16,7 @@ class TestController(val testService: TestService) {
     @PostMapping("/check")
     fun checkTest(@RequestBody testDto: TestDto, @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<TestDto> {
         val checkedTest = testService.checkTest(testDto)
+        checkedTest.isCompleted = true
         userPrincipal?.let { testService.markAsCompleted(testDto, it.id) }
         return ResponseEntity.ok(checkedTest)
     }

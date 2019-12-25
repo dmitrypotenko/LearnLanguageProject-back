@@ -52,7 +52,15 @@ class CourseService(val lessonService: LessonService,
         val courses = dslContext.selectFrom(Tables.COURSE)
                 .where(Tables.COURSE.DELETED.eq(false))
                 .fetchInto(Course::class.java)
-        val dtos = courses.map { mapCourseToDto(it) }
+        courses.forEach {
+        }
+        val dtos = courses.map {
+            mapCourseToDto(it)
+        }
+        dtos.forEach { dto ->
+            dto.lessons = lessonService.getLessonsByCourseId(dto.id!!)
+            dto.tests = testService.getTestsByCourseId(dto.id!!)
+        }
         dtos.forEach { setCompletion(it, userId) }
         return dtos
     }
@@ -64,6 +72,7 @@ class CourseService(val lessonService: LessonService,
         userId?.let { markAsStarted(userId, courseDto.id!!) }
         courseDto.tests.forEach { test ->
             if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
+                test.isCompleted = true
                 for (question in test.questions) {
                     variantService.getChosenVariantsForQuestion(question.id!!, userId).forEach { variant -> question.variants.find { it.id == variant.id }?.isTicked = true }
                 }
@@ -76,6 +85,11 @@ class CourseService(val lessonService: LessonService,
                 }
             }
 
+        }
+        courseDto.lessons.forEach { lesson ->
+            if (userId?.let { lessonService.getCompletedLesson(userId, lesson.id!!) != null } == true) {
+                lesson.isCompleted = true
+            }
         }
 
 
@@ -123,12 +137,12 @@ class CourseService(val lessonService: LessonService,
                               userId: Long?) {
         val startedCourse = getStartedCourse(courseDto.id!!, userId)
 
-        val completedLessons = dslContext.selectFrom(Tables.COMPLETED_LESSON.join(Tables.LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(Tables.LESSON.ID)))
+        val completedLessons = dslContext.selectFrom(Tables.LESSON.leftJoin(Tables.COMPLETED_LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(Tables.LESSON.ID)))
                 .where(Tables.LESSON.DELETED.eq(false).and(Tables.LESSON.COURSE_ID.eq(courseDto.id)).and(Tables.COMPLETED_LESSON.USER_ID.eq(userId)))
                 .fetchInto(CompletedLesson::class.java)
 
-        val completedTests = dslContext.selectFrom(Tables.COMPLETED_LESSON.join(Tables.LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(Tables.LESSON.ID)))
-                .where(Tables.LESSON.DELETED.eq(false).and(Tables.LESSON.COURSE_ID.eq(courseDto.id)).and(Tables.COMPLETED_LESSON.USER_ID.eq(userId)))
+        val completedTests = dslContext.selectFrom(Tables.COMPLETED_TEST.join(Tables.TEST).on(Tables.COMPLETED_TEST.TEST_ID.eq(Tables.TEST.ID)))
+                .where(Tables.TEST.DELETED.eq(false).and(Tables.TEST.COURSE_ID.eq(courseDto.id)).and(Tables.COMPLETED_TEST.USER_ID.eq(userId)))
                 .fetchInto(CompletedTest::class.java)
 
         val allLessonsCompleted = courseDto.lessons.all { lessonDto -> completedLessons.find { it.lessonId == lessonDto.id } != null }
@@ -136,7 +150,7 @@ class CourseService(val lessonService: LessonService,
 
         courseDto.completion = CompletionDto(
                 startedCourse != null,
-                allLessonsCompleted && allTestsCompleted,
+                allLessonsCompleted && allTestsCompleted && (courseDto.lessons.isNotEmpty() || courseDto.tests.isNotEmpty()),
                 0.0,
                 0.0
         )

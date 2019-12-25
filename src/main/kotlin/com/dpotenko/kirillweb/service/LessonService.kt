@@ -2,6 +2,7 @@ package com.dpotenko.kirillweb.service
 
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.dto.LessonDto
+import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.Lesson
 import org.jooq.DSLContext
 import org.springframework.stereotype.Component
@@ -52,7 +53,26 @@ class LessonService(val dslContext: DSLContext,
         return lessonsDto
     }
 
-    private fun mapLessonToDto(lesson: Lesson) : LessonDto {
+    fun markAsCompleted(lessonId: Long,
+                        userId: Long) {
+        if (getCompletedLesson(userId, lessonId) == null) {
+            val completedLesson = CompletedLesson()
+            completedLesson.lessonId = lessonId
+            completedLesson.userId = userId
+            val newRecord = dslContext.newRecord(Tables.COMPLETED_LESSON, completedLesson)
+            newRecord.insert()
+        }
+    }
+
+    fun getCompletedLesson(userId: Long,
+                           lessonId: Long): CompletedLesson? {
+        return dslContext.selectFrom(Tables.COMPLETED_LESSON.join(Tables.LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(Tables.LESSON.ID)))
+                .where(Tables.LESSON.DELETED.eq(false).and(Tables.LESSON.ID.eq(lessonId))
+                        .and(Tables.COMPLETED_LESSON.USER_ID.eq(userId)))
+                .fetchOneInto(CompletedLesson::class.java)
+    }
+
+    private fun mapLessonToDto(lesson: Lesson): LessonDto {
         return LessonDto(
                 lesson.videoLink,
                 lesson.lessonText,
@@ -61,6 +81,5 @@ class LessonService(val dslContext: DSLContext,
                 lesson.orderNumber.toLong(),
                 lesson.id
         )
-
     }
 }

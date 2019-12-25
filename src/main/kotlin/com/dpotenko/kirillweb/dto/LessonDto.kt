@@ -7,4 +7,6 @@ data class LessonDto(
         var attachments: List<AttachmentDto>,
         val order: Long,
         var id: Long?
-)
+) {
+    var isCompleted: Boolean = false
+}
