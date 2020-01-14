@@ -31,3 +31,4 @@ management:
 server:
   port: 8080
 
+google.storage: 'C:\projects\creds\PotenkoProject-139e858a53e7.json'
