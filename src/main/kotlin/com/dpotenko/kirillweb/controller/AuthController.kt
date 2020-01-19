@@ -18,12 +18,8 @@ class AuthController {
         return RedirectView("login")
     }
 
-    @GetMapping(path = ["/isAdmin"])
-    fun isAllowed(@AuthenticationPrincipal userPrincipal: UserPrincipal?): String {
-        if (userPrincipal != null && userPrincipal.isAdmin()) {
-            return "true"
-        }
-
-        return "false"
+    @GetMapping(path = ["/role"])
+    fun isAllowed(@AuthenticationPrincipal userPrincipal: UserPrincipal?): List<String> {
+        return userPrincipal?.authorities?.map { it?.authority ?: "" } ?: emptyList()
     }
 }

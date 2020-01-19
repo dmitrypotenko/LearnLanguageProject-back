@@ -84,12 +84,17 @@ class TestService(val dslContext: DSLContext,
             completedTest.testId = testDto.id
             val newRecord = dslContext.newRecord(Tables.COMPLETED_TEST, completedTest)
             newRecord.insert()
-            testDto.questions.forEach { question -> question.variants.filter { it.isTicked }.forEach { variantService.markAsChosenVariant(userId, it.id!!) } }
+            testDto.questions.forEach { question ->
+                question.variants.filter { it.isTicked }
+                        .forEach {
+                            variantService.markAsChosenVariant(userId, it.id!!)
+                        }
+            }
         }
     }
 
     fun getCompletedTest(userId: Long,
-                                 testId: Long): CompletedTest? {
+                         testId: Long): CompletedTest? {
         return dslContext.selectFrom(Tables.COMPLETED_TEST.join(Tables.TEST).on(Tables.COMPLETED_TEST.TEST_ID.eq(Tables.TEST.ID)))
                 .where(Tables.TEST.DELETED.eq(false).and(Tables.TEST.ID.eq(testId))
                         .and(Tables.COMPLETED_TEST.USER_ID.eq(userId)))
@@ -107,11 +112,9 @@ class TestService(val dslContext: DSLContext,
                 } else if (actualVariant.isRight) {
                     result = false
                     userVariant.isRight = true
-                    userVariant.isTicked = true
                 } else if (userVariant.isTicked) {
                     result = false
                     userVariant.isWrong = true
-                    userVariant.isTicked = true
                 }
             }
         }
@@ -126,5 +129,26 @@ class TestService(val dslContext: DSLContext,
                 test.orderNumber.toLong(),
                 test.id
         )
+    }
+
+    fun invalidateTest(testId: Long,
+                       userId: Long) {
+        dslContext.deleteFrom(Tables.COMPLETED_TEST)
+                .where(Tables.COMPLETED_TEST.TEST_ID.eq(testId).and(Tables.COMPLETED_TEST.USER_ID.eq(userId)))
+                .execute()
+
+        val variantIds = questionService.getQuestionsByTestId(testId)
+                .map { it.variants }
+                .reduce({ list1, list2 ->
+                    val mutableList = list1.toMutableList()
+                    mutableList.addAll(list2)
+                    mutableList
+                })
+                .map { it.id }
+
+        dslContext.deleteFrom(Tables.CHOSEN_VARIANT)
+                .where(Tables.CHOSEN_VARIANT.VARIANT_ID.`in`(variantIds).and(Tables.CHOSEN_VARIANT.USER_ID.eq(userId)))
+                .execute()
+
     }
 }

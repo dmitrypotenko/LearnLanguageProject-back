@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component
 class VariantService(val dslContext: DSLContext) {
     fun saveVariant(dto: VariantDto,
                     questionId: Long): Long {
-        val record = dslContext.newRecord(Tables.VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.isRight, dto.variant, null, questionId, false))
+        val record = dslContext.newRecord(Tables.VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.isRight, dto.variant, dto.explanation, questionId, false))
         if (dto.id == null) {
             record.insert()
         } else {
@@ -65,6 +65,7 @@ class VariantService(val dslContext: DSLContext) {
                 variant.right,
                 variant.wrong,
                 variant.ticked,
+                variant.explanation,
                 variant.id
         )
     }
