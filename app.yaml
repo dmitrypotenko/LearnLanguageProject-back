@@ -1,0 +1,7 @@
+runtime: java11
+service: back
+instance_class: F2
+
+env_variables:
+  SPRING_PROFILES_ACTIVE: "prod"
+  JAVA_TOOL_OPTIONS: "-XX:MaxRAM=500m"

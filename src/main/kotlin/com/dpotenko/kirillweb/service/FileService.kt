@@ -23,10 +23,15 @@ class FileService {
 
     @PostConstruct
     fun init() {
-        System.setProperty("GOOGLE_APPLICATION_CREDENTIALS", googleStorageKey)
-        storage = StorageOptions.newBuilder().setCredentials(ServiceAccountCredentials.fromStream(
-                FileInputStream(File(googleStorageKey))
-        )).build().service
+        var credentialsPath: String? = System.getProperty("GOOGLE_APPLICATION_CREDENTIALS")
+        if (credentialsPath?.isBlank() ?: true) {
+            storage = StorageOptions.getDefaultInstance().getService();
+        } else {
+            storage = StorageOptions.newBuilder().setCredentials(ServiceAccountCredentials.fromStream(
+                    FileInputStream(File(credentialsPath))
+            )).build().service
+        }
+
     }
 
     fun uploadImageFile(fileStream: MultipartFile): String {

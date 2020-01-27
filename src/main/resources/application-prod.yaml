@@ -1,1 +1,33 @@
-app.url: "http://localhost:4200/welcome"
+app.url: "https://lessonsbox.com/welcome"
+spring:
+  security:
+    oauth2:
+      client:
+        registration:
+          google:
+            client-id: 514342237226-c30rp9cusapgkm5osk37s9emkrreh5tl.apps.googleusercontent.com
+            client-secret: sgK8cZDhFbBEMrrQigOKRCEd
+          facebook:
+            client-id: 1057163594670284
+            client-secret: 44864383ec1dc7e73fd771e0db750435
+
+  datasource:
+    driver-class-name=com: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://google/principal?useSSL=false&cloudSqlInstance=potenkoproject:us-central1:dpotenko&socketFactory=com.google.cloud.sql.mysql.SocketFactory
+    username: root
+    password: QW5wNgngp3wa#
+  level:
+    org.springframework.security: INFO
+
+cors:
+  origin: "https://lessonsbox.com"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: ['*']
+server:
+  port: ${PORT}
+  servlet:
+    context-path: /back
