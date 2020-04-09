@@ -31,3 +31,6 @@ server:
   port: ${PORT}
   servlet:
     context-path: /back
+  forward-headers-strategy: native
+
+google.storage: 'NONE'

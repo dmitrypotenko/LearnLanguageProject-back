@@ -1,0 +1,4 @@
+max_pending_latency: 999999ms
+max_concurrent_requests: 80
+target_throughput_utilization: 0.95
+target_cpu_utilization: 0.95

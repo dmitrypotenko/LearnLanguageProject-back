@@ -3,11 +3,17 @@ package com.dpotenko.kirillweb.service
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.dto.CompletionDto
 import com.dpotenko.kirillweb.dto.CourseDto
+import com.dpotenko.kirillweb.dto.QuestionType
+import com.dpotenko.kirillweb.dto.VariantDto
+import com.dpotenko.kirillweb.service.question.CorrectOptionNotFoundException
 import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
 import com.dpotenko.kirillweb.tables.pojos.StartedCourse
 import org.jooq.DSLContext
+import org.jsoup.Jsoup
+import org.jsoup.nodes.Element
+import org.jsoup.select.Elements
 import org.springframework.stereotype.Component
 
 @Component
@@ -36,8 +42,35 @@ class CourseService(val lessonService: LessonService,
         dto.tests.forEach { it.id = testService.saveTest(it, course.id) }
         dto.tests.forEach { testDto ->
             testDto.questions.forEach { questionDto ->
+                if (questionDto.type == QuestionType.SELECT_WORDS) {
+                    questionDto.variants = Jsoup.parse(questionDto.question).select("select")
+                            .flatMap { select ->
+                                select.select("option")
+                                        .map {option->
+                                            val selectName = select.attr("name")
+                                            VariantDto(option.text(),
+                                                    isRight = option.attr("selected").isNotBlank(),
+                                                    isWrong = false,
+                                                    isTicked = false,
+                                                    explanation = "",
+                                                    id = null,
+                                                    inputName = selectName)
+                                        }
+                            }.toMutableList()
+
+                    if (questionDto.id != null) {
+                        val alreadySavedOptions = variantService.getVariantsByQuestionId(questionDto.id!!)
+                        questionDto.variants
+                                .forEach { optionToSave ->
+                                    alreadySavedOptions.find { it.inputName == optionToSave.inputName }
+                                            ?.let { optionToSave.id = it.id }
+                                }
+                    }
+                }
                 questionDto.id = questionService.saveQuestion(questionDto, testDto.id!!)
-                questionDto.variants.forEach { variantDto -> variantDto.id = variantService.saveVariant(variantDto, questionDto.id!!) }
+                questionDto.variants.forEach { variantDto ->
+                    variantDto.id = variantService.saveVariant(variantDto, questionDto.id!!, questionDto.type)
+                }
             }
         }
 
@@ -46,7 +79,6 @@ class CourseService(val lessonService: LessonService,
 
         return dto
     }
-
 
     fun getAllCourses(userId: Long?): List<CourseDto> {
         val courses = dslContext.selectFrom(Tables.COURSE)
@@ -77,7 +109,22 @@ class CourseService(val lessonService: LessonService,
                 test.questions.forEach { question ->
                     question.variants.forEach {
                         it.isRight = false
+                        it.explanation = ""
                     }
+                }
+            }
+
+            test.questions.forEach { question ->
+                if (question.type == QuestionType.SELECT_WORDS) {
+                    val document = Jsoup.parse(question.question)
+                    document.select("select").forEach { select ->
+                        select.select("option").forEach { option ->
+                            if (option.attr("selected").isNotBlank()) {
+                                option.removeAttr("selected")
+                            }
+                        }
+                    }
+                    question.question = document.body().html()
                 }
             }
 

@@ -3,7 +3,7 @@ package com.dpotenko.kirillweb.service
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.dto.QuestionStatus
 import com.dpotenko.kirillweb.dto.TestDto
-import com.dpotenko.kirillweb.dto.VariantDto
+import com.dpotenko.kirillweb.service.question.QuestionChecker
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Test
 import org.jooq.DSLContext
@@ -12,7 +12,8 @@ import org.springframework.stereotype.Component
 @Component
 class TestService(val dslContext: DSLContext,
                   val questionService: QuestionService,
-                  val variantService: VariantService) {
+                  val variantService: VariantService,
+                  val questionChekers: List<QuestionChecker>) {
 
     fun saveTest(dto: TestDto,
                  courseId: Long): Long {
@@ -63,8 +64,9 @@ class TestService(val dslContext: DSLContext,
         testDto.questions = questionService.getQuestionsByTestId(testDto.id!!)
 
         userTestDto.questions.forEach { userQuestion ->
-            testDto.questions.find { questionDto -> questionDto.id == userQuestion.id }?.let {
-                if (checkAnsweredCorrectly(userQuestion.variants, it.variants)) {
+            testDto.questions.find { questionDto -> questionDto.id == userQuestion.id }?.let { questionDto ->
+                if (questionChekers.find { it.types().contains(userQuestion.type) }?.checkQuestion(userQuestion, questionDto)
+                                ?: throw IllegalArgumentException("Can't find checker")) {
                     userQuestion.status = QuestionStatus.SUCCESS
                 } else {
                     userQuestion.status = QuestionStatus.FAILED
@@ -99,27 +101,6 @@ class TestService(val dslContext: DSLContext,
                 .where(Tables.TEST.DELETED.eq(false).and(Tables.TEST.ID.eq(testId))
                         .and(Tables.COMPLETED_TEST.USER_ID.eq(userId)))
                 .fetchOneInto(CompletedTest::class.java)
-    }
-
-    private fun checkAnsweredCorrectly(userVariants: List<VariantDto>,
-                                       actualVariants: List<VariantDto>): Boolean {
-        var result = true
-        userVariants.forEach { userVariant ->
-            val foundActualVariant = actualVariants.find { it.id == userVariant.id }
-            foundActualVariant?.let { actualVariant ->
-                if (userVariant.isTicked && actualVariant.isRight) {
-                    userVariant.isRight = true
-                } else if (actualVariant.isRight) {
-                    result = false
-                    userVariant.isRight = true
-                } else if (userVariant.isTicked) {
-                    result = false
-                    userVariant.isWrong = true
-                }
-            }
-        }
-
-        return result
     }
 
     private fun mapTestToDto(test: Test): TestDto {

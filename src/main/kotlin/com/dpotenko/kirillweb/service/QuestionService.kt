@@ -53,7 +53,7 @@ class QuestionService(val dslContext: DSLContext,
     private fun mapQuestionToDto(question: Question): QuestionDto {
         return QuestionDto(
                 question.questionText,
-                listOf(),
+                mutableListOf(),
                 question.type,
                 question.id
         )

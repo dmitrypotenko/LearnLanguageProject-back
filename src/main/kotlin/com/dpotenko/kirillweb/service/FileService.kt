@@ -23,12 +23,11 @@ class FileService {
 
     @PostConstruct
     fun init() {
-        var credentialsPath: String? = System.getProperty("GOOGLE_APPLICATION_CREDENTIALS")
-        if (credentialsPath?.isBlank() ?: true) {
+        if (googleStorageKey == "NONE") {
             storage = StorageOptions.getDefaultInstance().getService();
         } else {
             storage = StorageOptions.newBuilder().setCredentials(ServiceAccountCredentials.fromStream(
-                    FileInputStream(File(credentialsPath))
+                    FileInputStream(File(googleStorageKey))
             )).build().service
         }
 

@@ -12,6 +12,7 @@ data class VariantDto(
         var isWrong: Boolean,
         @get:JsonProperty("isTicked")
         var isTicked: Boolean,
-        val explanation: String?,
-        var id: Long?
+        var explanation: String?,
+        var id: Long?,
+        var inputName: String?
 )

@@ -1,6 +1,7 @@
 package com.dpotenko.kirillweb.service
 
 import com.dpotenko.kirillweb.Tables
+import com.dpotenko.kirillweb.dto.QuestionType
 import com.dpotenko.kirillweb.dto.VariantDto
 import com.dpotenko.kirillweb.tables.pojos.ChosenVariant
 import com.dpotenko.kirillweb.tables.pojos.Variant
@@ -10,11 +11,12 @@ import org.springframework.stereotype.Component
 @Component
 class VariantService(val dslContext: DSLContext) {
     fun saveVariant(dto: VariantDto,
-                    questionId: Long): Long {
-        val record = dslContext.newRecord(Tables.VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.isRight, dto.variant, dto.explanation, questionId, false))
+                    questionId: Long,
+                    questionType: QuestionType): Long {
+        val record = dslContext.newRecord(Tables.VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.variant, dto.isRight, dto.explanation, questionId, false, dto.inputName))
         if (dto.id == null) {
             record.insert()
-        } else {
+        }  else {
             record.update()
         }
 
@@ -35,11 +37,12 @@ class VariantService(val dslContext: DSLContext) {
     }
 
 
-    fun getVariantsByQuestionId(questionId: Long): List<VariantDto> {
+    fun getVariantsByQuestionId(questionId: Long): MutableList<VariantDto> {
         return dslContext.selectFrom(Tables.VARIANT)
                 .where(Tables.VARIANT.QUESTION_ID.eq(questionId).and(Tables.VARIANT.DELETED.eq(false)))
                 .fetchInto(Variant::class.java)
                 .map { mapVariantToDto(it) }
+                .toMutableList()
     }
 
     fun markAsChosenVariant(userId: Long,
@@ -66,7 +69,8 @@ class VariantService(val dslContext: DSLContext) {
                 variant.wrong,
                 variant.ticked,
                 variant.explanation,
-                variant.id
+                variant.id,
+                variant.inputName
         )
     }
 
