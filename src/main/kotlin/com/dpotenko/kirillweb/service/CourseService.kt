@@ -5,15 +5,15 @@ import com.dpotenko.kirillweb.dto.CompletionDto
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.dto.QuestionType
 import com.dpotenko.kirillweb.dto.VariantDto
-import com.dpotenko.kirillweb.service.question.CorrectOptionNotFoundException
 import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
 import com.dpotenko.kirillweb.tables.pojos.StartedCourse
 import org.jooq.DSLContext
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
-import org.jsoup.select.Elements
+import org.jsoup.nodes.Attributes
+import org.jsoup.nodes.FormElement
+import org.jsoup.parser.Tag
 import org.springframework.stereotype.Component
 
 @Component
@@ -46,7 +46,7 @@ class CourseService(val lessonService: LessonService,
                     questionDto.variants = Jsoup.parse(questionDto.question).select("select")
                             .flatMap { select ->
                                 select.select("option")
-                                        .map {option->
+                                        .map { option ->
                                             val selectName = select.attr("name")
                                             VariantDto(option.text(),
                                                     isRight = option.attr("selected").isNotBlank(),
@@ -62,7 +62,7 @@ class CourseService(val lessonService: LessonService,
                         val alreadySavedOptions = variantService.getVariantsByQuestionId(questionDto.id!!)
                         questionDto.variants
                                 .forEach { optionToSave ->
-                                    alreadySavedOptions.find { it.inputName == optionToSave.inputName }
+                                    alreadySavedOptions.find { it.inputName == optionToSave.inputName && it.variant == optionToSave.variant }
                                             ?.let { optionToSave.id = it.id }
                                 }
                     }
@@ -76,6 +76,8 @@ class CourseService(val lessonService: LessonService,
 
         lessonService.merge(dto.lessons, course.id)
         testService.merge(dto.tests, course.id)
+
+        clearVariants(dto)
 
         return dto
     }
@@ -118,11 +120,9 @@ class CourseService(val lessonService: LessonService,
                 if (question.type == QuestionType.SELECT_WORDS) {
                     val document = Jsoup.parse(question.question)
                     document.select("select").forEach { select ->
-                        select.select("option").forEach { option ->
-                            if (option.attr("selected").isNotBlank()) {
-                                option.removeAttr("selected")
-                            }
-                        }
+                        val attributes = Attributes()
+                        attributes.add("name", select.attr("name"))
+                        select.replaceWith(FormElement(Tag.valueOf("select-element"), null, attributes))
                     }
                     question.question = document.body().html()
                 }
@@ -149,6 +149,16 @@ class CourseService(val lessonService: LessonService,
         dto.tests = testService.getTestsByCourseId(id)
 
         return dto
+    }
+
+    public fun clearVariants(dto: CourseDto) {
+        dto.tests.forEach { test ->
+            test.questions.forEach { question ->
+                if (question.type == QuestionType.SELECT_WORDS) {
+                    question.variants = mutableListOf()
+                }
+            }
+        }
     }
 
     private fun mapCourseToDto(course: Course): CourseDto {

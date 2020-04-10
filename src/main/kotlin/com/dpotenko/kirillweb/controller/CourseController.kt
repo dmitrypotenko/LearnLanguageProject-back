@@ -41,6 +41,7 @@ class CourseController(val courseService: CourseService) {
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun getCourseForEdit(@PathVariable("id") id: Long): ResponseEntity<CourseDto> {
         val course = courseService.getCourseByIdForEdit(id)
+        courseService.clearVariants(course)
         return ResponseEntity.ok(course)
     }
 
