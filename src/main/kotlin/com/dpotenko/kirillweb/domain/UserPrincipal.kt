@@ -46,7 +46,7 @@ open class UserPrincipal(val id: Long,
 
     companion object {
         fun create(user: User): UserPrincipal {
-            val authorities: List<GrantedAuthority> = Collections.singletonList(SimpleGrantedAuthority(user.role))
+            val authorities: List<GrantedAuthority> = user.role.split(",").map { SimpleGrantedAuthority(it) }
             return UserPrincipal(
                     user.id,
                     user.email,

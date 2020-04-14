@@ -1,6 +1,7 @@
 package com.dpotenko.kirillweb.controller
 
 import com.dpotenko.kirillweb.domain.UserPrincipal
+import com.dpotenko.kirillweb.dto.UserDto
 import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.RequestMapping
@@ -18,8 +19,11 @@ class AuthController {
         return RedirectView("login")
     }
 
-    @GetMapping(path = ["/role"])
-    fun isAllowed(@AuthenticationPrincipal userPrincipal: UserPrincipal?): List<String> {
-        return userPrincipal?.authorities?.map { it?.authority ?: "" } ?: emptyList()
+    @GetMapping(path = ["/userInfo"])
+    fun getUser(@AuthenticationPrincipal userPrincipal: UserPrincipal?): UserDto {
+        return UserDto(
+                userPrincipal?.id,
+                userPrincipal?.authorities?.map { it?.authority ?: "" } ?: listOf()
+        )
     }
 }

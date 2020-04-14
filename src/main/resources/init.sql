@@ -65,6 +65,7 @@ create table if not exists variant
 	variant_text varchar(256) null,
 	explanation text null,
 	question_id bigint null,
+    	input_name varchar(256) null,
 	constraint variant_question_id_fk
 		foreign key (question_id) references question (id)
 );
@@ -142,4 +143,16 @@ create table if not exists principal.chosen_variant
 		foreign key (user_id) references principal.user (id),
 	constraint chosen_variants_variant_id_fk
 		foreign key (variant_id) references principal.variant (id)
+);
+
+create table if not exists principal.course_creator
+(
+	id bigint auto_increment
+		primary key,
+	user_id bigint not null,
+	course_id bigint not null,
+	constraint course_creator_course_id_fk
+		foreign key (course_id) references principal.course (id),
+	constraint course_creator_user_id_fk
+		foreign key (user_id) references principal.user (id)
 );

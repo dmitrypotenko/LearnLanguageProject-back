@@ -3,6 +3,7 @@ package com.dpotenko.kirillweb.controller
 import com.dpotenko.kirillweb.domain.UserPrincipal
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.service.CourseService
+import com.dpotenko.kirillweb.service.OwnerService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -16,12 +17,15 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/courses")
-class CourseController(val courseService: CourseService) {
+class CourseController(val courseService: CourseService,
+                       val ownerService: OwnerService) {
 
     @PostMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun submitCourse(@RequestBody courseDto: CourseDto): ResponseEntity<CourseDto> {
+    fun submitCourse(@RequestBody courseDto: CourseDto, @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<CourseDto> {
+        ownerService.checkIsAllowedToEdit(courseDto.id, userPrincipal)
         val course = courseService.saveCourse(courseDto)
+        ownerService.saveCreator(userPrincipal, courseDto)
         return ResponseEntity.ok(course)
     }
 
@@ -39,7 +43,8 @@ class CourseController(val courseService: CourseService) {
 
     @GetMapping("/edit/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun getCourseForEdit(@PathVariable("id") id: Long): ResponseEntity<CourseDto> {
+    fun getCourseForEdit(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<CourseDto> {
+        ownerService.checkIsAllowedToEdit(id, userPrincipal)
         val course = courseService.getCourseByIdForEdit(id)
         courseService.clearVariants(course)
         return ResponseEntity.ok(course)
@@ -47,7 +52,8 @@ class CourseController(val courseService: CourseService) {
 
     @DeleteMapping("/{id}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun deleteCourse(@PathVariable("id") id: Long) {
+    fun deleteCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?) {
+        ownerService.checkIsAllowedToEdit(id, userPrincipal)
         courseService.deleteCourseById(id)
     }
 }

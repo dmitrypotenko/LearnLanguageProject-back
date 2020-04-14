@@ -22,6 +22,7 @@ class CourseService(val lessonService: LessonService,
                     val testService: TestService,
                     val variantService: VariantService,
                     val attachmentService: AttachmentService,
+                    val ownerService: OwnerService,
                     val dslContext: DSLContext) {
     fun saveCourse(dto: CourseDto): CourseDto {
         val course = dslContext.newRecord(Tables.COURSE, Course(dto.name, dto.category, dto.description, dto.id, false))
@@ -92,7 +93,12 @@ class CourseService(val lessonService: LessonService,
             mapCourseToDto(it)
         }
         dtos.forEach { setCompletion(it, userId) }
+        dtos.forEach { setCreators(it) }
         return dtos
+    }
+
+    private fun setCreators(courseDto: CourseDto) {
+        courseDto.ownerIds = ownerService.findCreators(courseDto.id).map { it.id }
     }
 
     fun getCourseById(id: Long,
@@ -168,7 +174,8 @@ class CourseService(val lessonService: LessonService,
                 course.category,
                 emptyList(),
                 emptyList(),
-                course.id
+                course.id,
+                mutableListOf()
         )
     }
 
