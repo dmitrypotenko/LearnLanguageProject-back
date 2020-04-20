@@ -4,7 +4,7 @@ import com.fasterxml.jackson.annotation.JsonProperty
 
 
 data class VariantDto(
-        val variant: String,
+        var variant: String,
         @param:JsonProperty("isRight")
         @get:JsonProperty("isRight")
         var isRight: Boolean,
@@ -14,5 +14,6 @@ data class VariantDto(
         var isTicked: Boolean,
         var explanation: String?,
         var id: Long?,
-        var inputName: String?
+        var inputName: String?,
+        var inputType: String?
 )

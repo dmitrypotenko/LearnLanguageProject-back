@@ -3,18 +3,20 @@ package com.dpotenko.kirillweb.service
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.dto.CompletionDto
 import com.dpotenko.kirillweb.dto.CourseDto
+import com.dpotenko.kirillweb.dto.QuestionDto
 import com.dpotenko.kirillweb.dto.QuestionType
-import com.dpotenko.kirillweb.dto.VariantDto
+import com.dpotenko.kirillweb.service.question.CustomInputViewTransformer
+import com.dpotenko.kirillweb.service.question.OptionParser
 import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
 import com.dpotenko.kirillweb.tables.pojos.StartedCourse
+import com.dpotenko.kirillweb.tables.pojos.Variant
 import org.jooq.DSLContext
 import org.jsoup.Jsoup
-import org.jsoup.nodes.Attributes
-import org.jsoup.nodes.FormElement
-import org.jsoup.parser.Tag
 import org.springframework.stereotype.Component
+
+private val CSS_SELECTOR_CUSTOM_INPUTS = "select,input"
 
 @Component
 class CourseService(val lessonService: LessonService,
@@ -23,7 +25,9 @@ class CourseService(val lessonService: LessonService,
                     val variantService: VariantService,
                     val attachmentService: AttachmentService,
                     val ownerService: OwnerService,
-                    val dslContext: DSLContext) {
+                    val dslContext: DSLContext,
+                    val optionParsers: List<OptionParser>,
+                    val viewTransformers: List<CustomInputViewTransformer>) {
     fun saveCourse(dto: CourseDto): CourseDto {
         val course = dslContext.newRecord(Tables.COURSE, Course(dto.name, dto.category, dto.description, dto.id, false))
 
@@ -43,20 +47,10 @@ class CourseService(val lessonService: LessonService,
         dto.tests.forEach { it.id = testService.saveTest(it, course.id) }
         dto.tests.forEach { testDto ->
             testDto.questions.forEach { questionDto ->
-                if (questionDto.type == QuestionType.SELECT_WORDS) {
-                    questionDto.variants = Jsoup.parse(questionDto.question).select("select")
-                            .flatMap { select ->
-                                select.select("option")
-                                        .map { option ->
-                                            val selectName = select.attr("name")
-                                            VariantDto(option.text(),
-                                                    isRight = option.attr("selected").isNotBlank(),
-                                                    isWrong = false,
-                                                    isTicked = false,
-                                                    explanation = "",
-                                                    id = null,
-                                                    inputName = selectName)
-                                        }
+                if (questionDto.type == QuestionType.CUSTOM_INPUT) {
+                    questionDto.variants = Jsoup.parse(questionDto.question).select(CSS_SELECTOR_CUSTOM_INPUTS)
+                            .flatMap { input ->
+                                optionParsers.find { input.tagName() == it.tagName }?.parseOptions(input) ?: emptyList()
                             }.toMutableList()
 
                     if (questionDto.id != null) {
@@ -98,7 +92,7 @@ class CourseService(val lessonService: LessonService,
     }
 
     private fun setCreators(courseDto: CourseDto) {
-        courseDto.ownerIds = ownerService.findCreators(courseDto.id).map { it.id }
+        courseDto.ownerIds = ownerService.findCreators(courseDto.id).map { it.userId }
     }
 
     fun getCourseById(id: Long,
@@ -107,10 +101,17 @@ class CourseService(val lessonService: LessonService,
         setCompletion(courseDto, userId)
         userId?.let { markAsStarted(userId, courseDto.id!!) }
         courseDto.tests.forEach { test ->
+            test.questions.forEach { question ->
+                question.variants.filter { it.inputType == "input" }.forEach {
+                    it.variant = ""
+                    it.isTicked = true
+                }
+            }
+
             if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
                 test.isCompleted = true
                 for (question in test.questions) {
-                    variantService.getChosenVariantsForQuestion(question.id!!, userId).forEach { variant -> question.variants.find { it.id == variant.id }?.isTicked = true }
+                    variantService.getChosenVariantsForQuestion(question.id!!, userId).forEach { variant -> markChosenVariant(question, variant) }
                 }
                 testService.checkTest(test)
             } else {
@@ -123,12 +124,10 @@ class CourseService(val lessonService: LessonService,
             }
 
             test.questions.forEach { question ->
-                if (question.type == QuestionType.SELECT_WORDS) {
+                if (question.type == QuestionType.CUSTOM_INPUT) {
                     val document = Jsoup.parse(question.question)
-                    document.select("select").forEach { select ->
-                        val attributes = Attributes()
-                        attributes.add("name", select.attr("name"))
-                        select.replaceWith(FormElement(Tag.valueOf("select-element"), null, attributes))
+                    document.select(CSS_SELECTOR_CUSTOM_INPUTS).forEach { customInput ->
+                        viewTransformers.find { customInput.tagName() == it.tagName }?.transform(customInput)
                     }
                     question.question = document.body().html()
                 }
@@ -145,6 +144,21 @@ class CourseService(val lessonService: LessonService,
         return courseDto
     }
 
+    private fun markChosenVariant(question: QuestionDto,
+                                  variant: Variant) {
+        if (variant.inputType == "input") {
+            question.variants.find { it.inputName == variant.inputName }?.let {
+                it.isTicked = true;
+                it.variant = variant.variantText;
+                it.explanation = variant.explanation;
+                it.isRight = variant.right;
+                it.id = variant.id
+            }
+        } else {
+            question.variants.find { it.id == variant.id }?.isTicked = true
+        }
+    }
+
     fun getCourseByIdForEdit(id: Long): CourseDto {
         val course = dslContext.selectFrom(Tables.COURSE)
                 .where(Tables.COURSE.DELETED.eq(false).and(Tables.COURSE.ID.eq(id)))
@@ -157,10 +171,10 @@ class CourseService(val lessonService: LessonService,
         return dto
     }
 
-    public fun clearVariants(dto: CourseDto) {
+    fun clearVariants(dto: CourseDto) {
         dto.tests.forEach { test ->
             test.questions.forEach { question ->
-                if (question.type == QuestionType.SELECT_WORDS) {
+                if (question.type == QuestionType.CUSTOM_INPUT) {
                     question.variants = mutableListOf()
                 }
             }

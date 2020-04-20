@@ -3,8 +3,6 @@ package com.dpotenko.kirillweb.service.question
 import com.dpotenko.kirillweb.dto.QuestionDto
 import com.dpotenko.kirillweb.dto.QuestionType
 import com.dpotenko.kirillweb.dto.VariantDto
-import org.jsoup.Jsoup
-import org.jsoup.nodes.Element
 import org.springframework.stereotype.Component
 
 
@@ -18,7 +16,7 @@ interface QuestionChecker {
 @Component
 class SimpleQuestionChecker : QuestionChecker {
     override fun types(): List<QuestionType> {
-        return listOf(QuestionType.SINGLE_CHOICE, QuestionType.MULTIPLE_CHOICE, QuestionType.SELECT_WORDS)
+        return listOf(QuestionType.SINGLE_CHOICE, QuestionType.MULTIPLE_CHOICE)
     }
 
     override fun checkQuestion(userQuestion: QuestionDto,
@@ -49,48 +47,94 @@ class SimpleQuestionChecker : QuestionChecker {
 
     private fun findActualOption(realQuestion: QuestionDto,
                                  userVariant: VariantDto): VariantDto? {
-        if (realQuestion.type == QuestionType.SELECT_WORDS) {
-            val foundVariant = realQuestion.variants.find { it.inputName == userVariant.inputName && it.variant == userVariant.variant}
-            userVariant.id = foundVariant?.id
-            return foundVariant
-        }
-       return realQuestion.variants.find { it.id == userVariant.id }
+        return realQuestion.variants.find { it.id == userVariant.id }
     }
 }
 
 @Component
 class SelectWordsChecker : QuestionChecker {
     override fun types(): List<QuestionType> {
-        return listOf()
+        return listOf(QuestionType.CUSTOM_INPUT)
     }
 
     override fun checkQuestion(userQuestion: QuestionDto,
                                realQuestion: QuestionDto): Boolean {
-        userQuestion.variants = mutableListOf()
-        val realSelects = Jsoup.parse(realQuestion.question).select("select")
+        var result = true
+        if (userQuestion.variants.size != realQuestion.variants.size) {
+            result = false
+        }
+        val toAdd = mutableListOf<VariantDto>()
+        userQuestion.variants.forEach { userVariant ->
 
-        var isCorrect = true
+            val foundActualVariant = findActualOption(realQuestion, userVariant)
+            foundActualVariant?.let { actualVariant ->
+                userVariant.explanation = actualVariant.explanation
 
-        Jsoup.parse(userQuestion.question).select("select")
-                .forEach({ select ->
-                    val userOption = findCorrectOption(select)
-                    val selectName = select.attr("name")
-                    val matchedRealSelect = realSelects.find { realSelect -> realSelect.attr("name") == selectName }
-                            ?: throw SelectNotFoundException("Can't find select for $selectName")
-                    val realCorrectOption = findCorrectOption(matchedRealSelect)
-                    if (realCorrectOption == null || userOption == null || realCorrectOption != userOption) {
-                        userQuestion.variants.add(VariantDto(realCorrectOption?: "No option"
-                                ?: "", isRight = true, isWrong = false, isTicked = false, explanation = "", id = 0L, inputName = null))
-                        isCorrect = false
+                if (userVariant.inputType == "input") {
+                    val isEquals = checkInputIsRight(userVariant, actualVariant)
+                    if (!isEquals) {
+                        toAdd.add(foundActualVariant)
+                        result = false
                     }
-                })
+                } else {
+                    userVariant.id = actualVariant.id
+                    val isSelectionRight = checkSelectIsRight(userVariant, actualVariant)
+                    if (!isSelectionRight) {
+                        result = false;
+                    }
+                }
+            } ?: also {
+                result = false
+                userVariant.isWrong = true
+            }
+        }
 
-        return isCorrect
+        userQuestion.variants.addAll(toAdd)
+
+        return result
     }
 
-    private fun findCorrectOption(select: Element): String? {
-        return select.select("option")
-                .find { option -> option.attr("selected").isNotBlank() }?.text()
+    private fun checkInputIsRight(userVariant: VariantDto,
+                                  actualVariant: VariantDto): Boolean {
+        if (!userVariant.isTicked) {
+            return false
+        }
+        val transformedOption = userVariant.variant.replace("//s+".toRegex(), " ").trim()
+        val isEquals = transformedOption.equals(actualVariant.variant, true)
+        if (isEquals) {
+            userVariant.isRight = true
+        }
+        return isEquals
     }
+
+    private fun checkSelectIsRight(userVariant: VariantDto,
+                                   actualVariant: VariantDto): Boolean {
+        if (userVariant.isTicked && actualVariant.isRight) {
+            userVariant.isRight = true
+        } else if (actualVariant.isRight) {
+            userVariant.isRight = true
+            return false
+        } else if (userVariant.isTicked) {
+            userVariant.isWrong = true
+            return false
+        }
+
+        return true
+    }
+
+    private fun findActualOption(realQuestion: QuestionDto,
+                                 userVariant: VariantDto): VariantDto? {
+        val foundVariant = realQuestion.variants.find { checkOptionsMatching(it, userVariant) }
+        return foundVariant
+    }
+
+    private fun checkOptionsMatching(it: VariantDto,
+                                     userVariant: VariantDto): Boolean {
+        if (userVariant.inputType == "input") {
+            return it.inputName == userVariant.inputName && !it.isTicked
+        }
+        return it.variant == userVariant.variant && it.inputName == userVariant.inputName
+    }
+
 
 }

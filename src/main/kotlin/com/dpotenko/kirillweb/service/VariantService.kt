@@ -1,11 +1,13 @@
 package com.dpotenko.kirillweb.service
 
-import com.dpotenko.kirillweb.Tables
+import com.dpotenko.kirillweb.Tables.CHOSEN_VARIANT
+import com.dpotenko.kirillweb.Tables.VARIANT
 import com.dpotenko.kirillweb.dto.QuestionType
 import com.dpotenko.kirillweb.dto.VariantDto
 import com.dpotenko.kirillweb.tables.pojos.ChosenVariant
 import com.dpotenko.kirillweb.tables.pojos.Variant
 import org.jooq.DSLContext
+import org.jooq.impl.DSL
 import org.springframework.stereotype.Component
 
 @Component
@@ -13,10 +15,10 @@ class VariantService(val dslContext: DSLContext) {
     fun saveVariant(dto: VariantDto,
                     questionId: Long,
                     questionType: QuestionType): Long {
-        val record = dslContext.newRecord(Tables.VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.variant, dto.isRight, dto.explanation, questionId, false, dto.inputName))
+        val record = dslContext.newRecord(VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.variant, dto.isRight, dto.explanation, questionId, false, dto.inputName, dto.inputType))
         if (dto.id == null) {
             record.insert()
-        }  else {
+        } else {
             record.update()
         }
 
@@ -25,11 +27,13 @@ class VariantService(val dslContext: DSLContext) {
 
     fun merge(variants: List<VariantDto>,
               questionId: Long) {
-        dslContext.selectFrom(Tables.VARIANT)
-                .where(Tables.VARIANT.QUESTION_ID.eq(questionId).and(Tables.VARIANT.DELETED.eq(false)))
+        dslContext.selectFrom(VARIANT)
+                .where(VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)))
                 .fetch()
                 .forEach { variantRecord ->
-                    if (variants.find { it.id == variantRecord.id } == null) {
+                    if (variantRecord.inputType == "input" && variantRecord.ticked && variants.find {  it.inputName == variantRecord.inputName }!=null) {
+                        println("Skip user chosen variant")
+                    } else if (variants.find { it.id == variantRecord.id } == null) {
                         variantRecord.deleted = true
                         variantRecord.store()
                     }
@@ -38,27 +42,31 @@ class VariantService(val dslContext: DSLContext) {
 
 
     fun getVariantsByQuestionId(questionId: Long): MutableList<VariantDto> {
-        return dslContext.selectFrom(Tables.VARIANT)
-                .where(Tables.VARIANT.QUESTION_ID.eq(questionId).and(Tables.VARIANT.DELETED.eq(false)))
+        return dslContext.select(VARIANT.fields().toList())
+                .from(VARIANT.leftJoin(CHOSEN_VARIANT).on(VARIANT.ID.eq(CHOSEN_VARIANT.VARIANT_ID)))
+                .where(DSL.or(VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)).and(VARIANT.INPUT_TYPE.notEqual("input").or(VARIANT.INPUT_TYPE.isNull)),
+                        VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)).and(VARIANT.INPUT_TYPE.eq("input").and(CHOSEN_VARIANT.ID.isNull())))
+
+                )
                 .fetchInto(Variant::class.java)
                 .map { mapVariantToDto(it) }
                 .toMutableList()
     }
 
     fun markAsChosenVariant(userId: Long,
-                            variantId: Long) {
+                            variant: VariantDto) {
         val chosenVariant = ChosenVariant()
         chosenVariant.userId = userId
-        chosenVariant.variantId = variantId
-        val newRecord = dslContext.newRecord(Tables.CHOSEN_VARIANT, chosenVariant)
+        chosenVariant.variantId = variant.id!!
+        val newRecord = dslContext.newRecord(CHOSEN_VARIANT, chosenVariant)
         newRecord.insert()
     }
 
     fun getChosenVariantsForQuestion(questionId: Long,
                                      userId: Long): List<Variant> {
-        return dslContext.selectFrom(Tables.CHOSEN_VARIANT.join(Tables.VARIANT).on(Tables.CHOSEN_VARIANT.VARIANT_ID.eq(Tables.VARIANT.ID)))
-                .where(Tables.VARIANT.DELETED.eq(false).and(Tables.VARIANT.QUESTION_ID.eq(questionId))
-                        .and(Tables.CHOSEN_VARIANT.USER_ID.eq(userId)))
+        return dslContext.selectFrom(CHOSEN_VARIANT.join(VARIANT).on(CHOSEN_VARIANT.VARIANT_ID.eq(VARIANT.ID)))
+                .where(VARIANT.DELETED.eq(false).and(VARIANT.QUESTION_ID.eq(questionId))
+                        .and(CHOSEN_VARIANT.USER_ID.eq(userId)))
                 .fetchInto(Variant::class.java)
     }
 
@@ -70,7 +78,8 @@ class VariantService(val dslContext: DSLContext) {
                 variant.ticked,
                 variant.explanation,
                 variant.id,
-                variant.inputName
+                variant.inputName,
+                variant.inputType
         )
     }
 

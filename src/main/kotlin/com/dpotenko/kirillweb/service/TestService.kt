@@ -1,8 +1,12 @@
 package com.dpotenko.kirillweb.service
 
-import com.dpotenko.kirillweb.Tables
+import com.dpotenko.kirillweb.Tables.CHOSEN_VARIANT
+import com.dpotenko.kirillweb.Tables.COMPLETED_TEST
+import com.dpotenko.kirillweb.Tables.TEST
+import com.dpotenko.kirillweb.Tables.VARIANT
 import com.dpotenko.kirillweb.dto.QuestionStatus
 import com.dpotenko.kirillweb.dto.TestDto
+import com.dpotenko.kirillweb.dto.VariantDto
 import com.dpotenko.kirillweb.service.question.QuestionChecker
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Test
@@ -17,7 +21,7 @@ class TestService(val dslContext: DSLContext,
 
     fun saveTest(dto: TestDto,
                  courseId: Long): Long {
-        val record = dslContext.newRecord(Tables.TEST, Test(dto.id, dto.name, dto.order.toInt(), courseId, false))
+        val record = dslContext.newRecord(TEST, Test(dto.id, dto.name, dto.order.toInt(), courseId, false))
         if (dto.id == null) {
             record.insert()
         } else {
@@ -29,8 +33,8 @@ class TestService(val dslContext: DSLContext,
 
     fun merge(tests: List<TestDto>,
               courseId: Long) {
-        dslContext.selectFrom(Tables.TEST)
-                .where(Tables.TEST.COURSE_ID.eq(courseId).and(Tables.TEST.DELETED.eq(false)))
+        dslContext.selectFrom(TEST)
+                .where(TEST.COURSE_ID.eq(courseId).and(TEST.DELETED.eq(false)))
                 .fetch()
                 .forEach { testRecord ->
                     val foundTest = tests.find { it.id == testRecord.id }
@@ -44,8 +48,8 @@ class TestService(val dslContext: DSLContext,
     }
 
     fun getTestsByCourseId(courseId: Long): List<TestDto> {
-        val tests = dslContext.selectFrom(Tables.TEST)
-                .where(Tables.TEST.COURSE_ID.eq(courseId).and(Tables.TEST.DELETED.eq(false)))
+        val tests = dslContext.selectFrom(TEST)
+                .where(TEST.COURSE_ID.eq(courseId).and(TEST.DELETED.eq(false)))
                 .fetchInto(Test::class.java)
 
         val testsDto = tests.map { mapTestToDto(it) }
@@ -56,8 +60,8 @@ class TestService(val dslContext: DSLContext,
     }
 
     fun checkTest(userTestDto: TestDto): TestDto {
-        val test = dslContext.selectFrom(Tables.TEST)
-                .where(Tables.TEST.ID.eq(userTestDto.id).and(Tables.TEST.DELETED.eq(false)))
+        val test = dslContext.selectFrom(TEST)
+                .where(TEST.ID.eq(userTestDto.id).and(TEST.DELETED.eq(false)))
                 .fetchOneInto(Test::class.java)
 
         val testDto = mapTestToDto(test)
@@ -84,12 +88,18 @@ class TestService(val dslContext: DSLContext,
             val completedTest = CompletedTest()
             completedTest.userId = userId
             completedTest.testId = testDto.id
-            val newRecord = dslContext.newRecord(Tables.COMPLETED_TEST, completedTest)
+            val newRecord = dslContext.newRecord(COMPLETED_TEST, completedTest)
             newRecord.insert()
             testDto.questions.forEach { question ->
                 question.variants.filter { it.isTicked }
                         .forEach {
-                            variantService.markAsChosenVariant(userId, it.id!!)
+                            if (it.inputType == "input") {
+                                val variantDto = VariantDto(it.variant, it.isRight, it.isWrong, it.isTicked, it.explanation, null, it.inputName, it.inputType)
+                                variantDto.id = variantService.saveVariant(variantDto, questionId = question.id!!, questionType = question.type)
+                                variantService.markAsChosenVariant(userId, variantDto)
+                            } else {
+                                variantService.markAsChosenVariant(userId, it)
+                            }
                         }
             }
         }
@@ -97,9 +107,9 @@ class TestService(val dslContext: DSLContext,
 
     fun getCompletedTest(userId: Long,
                          testId: Long): CompletedTest? {
-        return dslContext.selectFrom(Tables.COMPLETED_TEST.join(Tables.TEST).on(Tables.COMPLETED_TEST.TEST_ID.eq(Tables.TEST.ID)))
-                .where(Tables.TEST.DELETED.eq(false).and(Tables.TEST.ID.eq(testId))
-                        .and(Tables.COMPLETED_TEST.USER_ID.eq(userId)))
+        return dslContext.selectFrom(COMPLETED_TEST.join(TEST).on(COMPLETED_TEST.TEST_ID.eq(TEST.ID)))
+                .where(TEST.DELETED.eq(false).and(TEST.ID.eq(testId))
+                        .and(COMPLETED_TEST.USER_ID.eq(userId)))
                 .fetchOneInto(CompletedTest::class.java)
     }
 
@@ -114,22 +124,28 @@ class TestService(val dslContext: DSLContext,
 
     fun invalidateTest(testId: Long,
                        userId: Long) {
-        dslContext.deleteFrom(Tables.COMPLETED_TEST)
-                .where(Tables.COMPLETED_TEST.TEST_ID.eq(testId).and(Tables.COMPLETED_TEST.USER_ID.eq(userId)))
+        dslContext.deleteFrom(COMPLETED_TEST)
+                .where(COMPLETED_TEST.TEST_ID.eq(testId).and(COMPLETED_TEST.USER_ID.eq(userId)))
                 .execute()
 
-        val variantIds = questionService.getQuestionsByTestId(testId)
+        val variants = questionService.getQuestionsByTestId(testId)
                 .map { it.variants }
                 .reduce({ list1, list2 ->
                     val mutableList = list1.toMutableList()
                     mutableList.addAll(list2)
                     mutableList
                 })
-                .map { it.id }
 
-        dslContext.deleteFrom(Tables.CHOSEN_VARIANT)
-                .where(Tables.CHOSEN_VARIANT.VARIANT_ID.`in`(variantIds).and(Tables.CHOSEN_VARIANT.USER_ID.eq(userId)))
+        dslContext.deleteFrom(CHOSEN_VARIANT)
+                .where(CHOSEN_VARIANT.VARIANT_ID.`in`(variants.map { it.id }).and(CHOSEN_VARIANT.USER_ID.eq(userId)))
                 .execute()
+
+        variants.forEach { variant ->
+            if (variant.isTicked && variant.inputType == "input") {
+                dslContext.deleteFrom(VARIANT).where(VARIANT.ID.eq(variant.id)).execute()
+            }
+        }
+
 
     }
 }

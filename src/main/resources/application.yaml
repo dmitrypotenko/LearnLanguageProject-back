@@ -30,7 +30,10 @@ management:
 
 server:
   port: 8080
-
-google.storage: 'C:\projects\creds\PotenkoProject-139e858a53e7.json'
+  servlet:
+    session:
+      timeout: '1440m'
 
 app.url: "http://localhost:4200/welcome"
+
+google.storage: 'C:\projects\creds\PotenkoProject-139e858a53e7.json'
