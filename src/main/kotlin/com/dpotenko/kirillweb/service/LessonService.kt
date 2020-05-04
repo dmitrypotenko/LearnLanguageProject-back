@@ -14,7 +14,7 @@ class LessonService(val dslContext: DSLContext,
     fun saveLesson(dto: LessonDto,
                    courseId: Long): Long {
 
-        val lesson = Lesson(dto.id, dto.lessonText, dto.name, dto.order.toInt(), dto.videoLink, courseId, false)
+        val lesson = Lesson(dto.id, dto.lessonText, dto.name, dto.order, dto.videoLink, courseId, false, null)
         val record = dslContext.newRecord(Tables.LESSON, lesson)
         if (dto.id == null) {
             record.insert()

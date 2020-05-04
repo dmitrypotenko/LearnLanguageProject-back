@@ -43,6 +43,11 @@
             <artifactId>spring-security-oauth2-jose</artifactId>
         </dependency>
         <dependency>
+            <groupId>org.postgresql</groupId>
+            <artifactId>postgresql</artifactId>
+            <version>42.2.12</version>
+        </dependency>
+        <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
@@ -89,6 +94,7 @@
             <artifactId>mysql-socket-factory</artifactId>
             <version>1.0.15</version>
         </dependency>
+
         <dependency>
             <groupId>org.jsoup</groupId>
             <artifactId>jsoup</artifactId>
@@ -143,13 +149,22 @@
                 <configuration>
                     <compilerPlugins>
                         <plugin>spring</plugin>
+                        <plugin>no-arg</plugin>
                     </compilerPlugins>
                     <jvmTarget>11</jvmTarget>
+                    <pluginOptions>
+                        no-arg:annotation=com.dpotenko.kirillweb.dto.JooqEntity
+                    </pluginOptions>
                 </configuration>
                 <dependencies>
                     <dependency>
                         <groupId>org.jetbrains.kotlin</groupId>
                         <artifactId>kotlin-maven-allopen</artifactId>
+                        <version>${kotlin.version}</version>
+                    </dependency>
+                    <dependency>
+                        <groupId>org.jetbrains.kotlin</groupId>
+                        <artifactId>kotlin-maven-noarg</artifactId>
                         <version>${kotlin.version}</version>
                     </dependency>
                 </dependencies>
@@ -221,9 +236,9 @@
 
                     <!-- JDBC connection parameters -->
                     <jdbc>
-                        <driver>com.mysql.cj.jdbc.Driver</driver>
-                        <url>jdbc:mysql://localhost:3306/principal</url>
-                        <user>root</user>
+                        <driver>org.postgresql.Driver</driver>
+                        <url>jdbc:postgresql://localhost:5433/postgres?sslmode=disable</url>
+                        <user>postgres</user>
                         <password>1111</password>
                     </jdbc>
 
@@ -235,7 +250,7 @@
                         </strategy>
                         <database>
                             <inputSchema>principal</inputSchema>
-                            <name>org.jooq.meta.mysql.MySQLDatabase</name>
+                            <name>org.jooq.meta.postgres.PostgresDatabase</name>
                             <forcedTypes>
                                 <forcedType>
                                     <name>BOOLEAN</name>

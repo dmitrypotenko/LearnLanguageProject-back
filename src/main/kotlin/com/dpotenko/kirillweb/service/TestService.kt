@@ -21,7 +21,7 @@ class TestService(val dslContext: DSLContext,
 
     fun saveTest(dto: TestDto,
                  courseId: Long): Long {
-        val record = dslContext.newRecord(TEST, Test(dto.id, dto.name, dto.order.toInt(), courseId, false))
+        val record = dslContext.newRecord(TEST, Test(dto.id, dto.name, dto.order, courseId, false, dto.successThreshold.toLong()))
         if (dto.id == null) {
             record.insert()
         } else {
@@ -118,7 +118,8 @@ class TestService(val dslContext: DSLContext,
                 listOf(),
                 test.name,
                 test.orderNumber.toLong(),
-                test.id
+                test.id,
+                test.successThreshold.toInt()
         )
     }
 

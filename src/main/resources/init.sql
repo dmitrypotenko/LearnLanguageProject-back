@@ -156,3 +156,7 @@ create table if not exists principal.course_creator
 	constraint course_creator_user_id_fk
 		foreign key (user_id) references principal.user (id)
 );
+
+
+alter table principal.test
+    add success_threshold int default 1 null;

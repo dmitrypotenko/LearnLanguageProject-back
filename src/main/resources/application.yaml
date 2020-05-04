@@ -12,12 +12,13 @@ spring:
 
 
   datasource:
-    driver-class-name=com: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/principal
-    username: root
+    driver-class-name=com: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5433/postgres?sslmode=disable
+    username: postgres
     password: 1111
   level:
     org.springframework.security: DEBUG
+
 
 cors:
   origin: "http://localhost:4200"

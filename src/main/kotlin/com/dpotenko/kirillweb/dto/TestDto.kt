@@ -4,7 +4,8 @@ data class TestDto(
         var questions: List<QuestionDto>,
         val name: String,
         val order: Long,
-        var id: Long?
+        var id: Long?,
+        val successThreshold: Int
 ) {
     var isCompleted: Boolean = false
 }

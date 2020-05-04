@@ -15,7 +15,7 @@ class VariantService(val dslContext: DSLContext) {
     fun saveVariant(dto: VariantDto,
                     questionId: Long,
                     questionType: QuestionType): Long {
-        val record = dslContext.newRecord(VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.variant, dto.isRight, dto.explanation, questionId, false, dto.inputName, dto.inputType))
+        val record = dslContext.newRecord(VARIANT, Variant(dto.id, dto.isTicked, dto.isWrong, dto.isRight, dto.variant, dto.explanation, questionId, false, dto.inputName, dto.inputType))
         if (dto.id == null) {
             record.insert()
         } else {
@@ -31,7 +31,7 @@ class VariantService(val dslContext: DSLContext) {
                 .where(VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)))
                 .fetch()
                 .forEach { variantRecord ->
-                    if (variantRecord.inputType == "input" && variantRecord.ticked && variants.find {  it.inputName == variantRecord.inputName }!=null) {
+                    if (variantRecord.inputType == "input" && variantRecord.ticked && variants.find { it.inputName == variantRecord.inputName } != null) {
                         println("Skip user chosen variant")
                     } else if (variants.find { it.id == variantRecord.id } == null) {
                         variantRecord.deleted = true

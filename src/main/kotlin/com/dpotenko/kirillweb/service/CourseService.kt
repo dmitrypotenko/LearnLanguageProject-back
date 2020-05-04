@@ -16,7 +16,7 @@ import org.jooq.DSLContext
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Component
 
-private val CSS_SELECTOR_CUSTOM_INPUTS = "select,input"
+private const val CSS_SELECTOR_CUSTOM_INPUTS = "select,input"
 
 @Component
 class CourseService(val lessonService: LessonService,

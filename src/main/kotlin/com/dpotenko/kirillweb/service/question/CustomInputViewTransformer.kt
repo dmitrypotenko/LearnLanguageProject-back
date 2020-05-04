@@ -30,6 +30,12 @@ class InputViewTransformer : CustomInputViewTransformer {
     override fun transform(customInput: Element): Element {
         val attributes = Attributes()
         attributes.add("name", customInput.attr("name"))
+        attributes.add("size", customInput.attr("size"))
+        var maxlength = customInput.attr("maxlength")
+        if (maxlength.isBlank()) {
+            maxlength = "400"
+        }
+        attributes.add("maxlength", maxlength)
         customInput.replaceWith(FormElement(Tag.valueOf("input-element"), null, attributes))
         return customInput
     }
