@@ -31,7 +31,7 @@ class CourseService(val lessonService: LessonService,
     fun saveCourse(dto: CourseDto): CourseDto {
         val course = dslContext.newRecord(Tables.COURSE, Course(dto.name, dto.category, dto.description, dto.id, false))
 
-        if (dto.id == null || dto.id == 0L) {
+        if (dto.id == null) {
             course.insert()
         } else {
             course.update()

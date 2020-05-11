@@ -44,6 +44,10 @@ open class UserPrincipal(val id: Long,
         return authorities.any { it?.authority == "ROLE_ADMIN" }
     }
 
+    fun isSuperAdmin(): Boolean {
+        return authorities.any { it?.authority == "ROLE_SUPER_ADMIN" }
+    }
+
     companion object {
         fun create(user: User): UserPrincipal {
             val authorities: List<GrantedAuthority> = user.role.split(",").map { SimpleGrantedAuthority(it) }

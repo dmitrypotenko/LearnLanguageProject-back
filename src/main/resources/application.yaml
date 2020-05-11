@@ -9,11 +9,12 @@ spring:
           facebook:
             client-id: 1048731185333188
             client-secret: 8d9815e3951dff92140e91408f15910e
+            scope: ["public_profile", "email"]
 
 
   datasource:
     driver-class-name=com: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5433/postgres?sslmode=disable
+    url: jdbc:postgresql://localhost:5432/postgres?sslmode=disable
     username: postgres
     password: 1111
   level:

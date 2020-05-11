@@ -16,10 +16,16 @@ class LessonService(val dslContext: DSLContext,
 
         val lesson = Lesson(dto.id, dto.lessonText, dto.name, dto.order, dto.videoLink, courseId, false, null)
         val record = dslContext.newRecord(Tables.LESSON, lesson)
+        val fieldToChange = record.fields("lesson_text",
+                "name",
+                "order_number",
+                "video_link",
+                "course_id",
+                "deleted")
         if (dto.id == null) {
-            record.insert()
+            record.insert(*fieldToChange)
         } else {
-            record.update()
+            record.update(*fieldToChange)
         }
 
         return record.id

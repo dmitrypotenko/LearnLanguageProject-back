@@ -12,15 +12,6 @@ class FacebookUserInfo(attributes: Map<String?, Any?>?) : OAuth2UserInfo(attribu
 
     override val imageUrl: String?
         get() {
-            if (attributes?.containsKey("picture")!!) {
-                val pictureObj = attributes?.get("picture") as Map<*, *>?
-                if (pictureObj!!.containsKey("data")) {
-                    val dataObj = pictureObj["data"] as Map<*, *>?
-                    if (dataObj!!.containsKey("url")) {
-                        return dataObj["url"] as String?
-                    }
-                }
-            }
-            return null
+            return "https://graph.facebook.com/$id/picture?type=large"
         }
 }

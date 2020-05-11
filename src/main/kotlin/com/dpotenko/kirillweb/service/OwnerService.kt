@@ -13,7 +13,7 @@ class OwnerService(val dslContext: DSLContext) {
 
     fun checkIsAllowedToEdit(courseId: Long?,
                              userPrincipal: UserPrincipal?) {
-        if (userPrincipal?.authorities?.map { it?.authority }?.contains("ROLE_SUPER_ADMIN") ?: false) {
+        if (isSuperAdmin(userPrincipal)) {
             return
         }
         if (courseId == null || courseId == 0L) {
@@ -27,6 +27,9 @@ class OwnerService(val dslContext: DSLContext) {
             throw AccessDeniedException("You are not included in the list of creators of this course.")
         }
     }
+
+    private fun isSuperAdmin(userPrincipal: UserPrincipal?) =
+            userPrincipal?.authorities?.map { it?.authority }?.contains("ROLE_SUPER_ADMIN") ?: false
 
     fun findCreators(courseId: Long?): List<CourseCreator> {
         return dslContext.selectFrom(Tables.COURSE_CREATOR)
@@ -44,6 +47,27 @@ class OwnerService(val dslContext: DSLContext) {
         if (creator == null) {
             val newRecord = dslContext.newRecord(Tables.COURSE_CREATOR, CourseCreator(null, userPrincipal?.id, courseDto.id))
             newRecord.insert()
+        }
+    }
+
+    fun findCommentCreator(commentId: Long?): Long {
+        return dslContext.select(Tables.COMMENT.USER_ID)
+                .from(Tables.COMMENT)
+                .where(Tables.COMMENT.ID.eq(commentId))
+                .fetchOne()
+                .value1()
+    }
+
+    fun checkIsAllowedToEditComment(commentId: Long?, userPrincipal: UserPrincipal?) {
+        if (isSuperAdmin(userPrincipal)) {
+            return
+        }
+        if (commentId == null) {
+            return
+        }
+
+        if (findCommentCreator(commentId) != userPrincipal?.id) {
+            throw AccessDeniedException("The comment $commentId does not belong to user ${userPrincipal?.id}")
         }
     }
 

@@ -12,9 +12,9 @@ spring:
             client-secret: 44864383ec1dc7e73fd771e0db750435
 
   datasource:
-    driver-class-name=com: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://google/principal?useSSL=false&cloudSqlInstance=potenkoproject:us-central1:dpotenko&socketFactory=com.google.cloud.sql.mysql.SocketFactory
-    username: root
+    driver-class-name=com: org.postgresql.Driver
+    url: jdbc:postgresql://google/postgres?sslmode=disable&cloudSqlInstance=potenkoproject:us-central1:dpotenko-postgres&socketFactory=com.google.cloud.sql.postgres.SocketFactory
+    username: postgres
     password: QW5wNgngp3wa#
   level:
     org.springframework.security: INFO
