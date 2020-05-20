@@ -7,7 +7,8 @@ data class CourseDto(
         var lessons: List<LessonDto>,
         var tests: List<TestDto>,
         var id: Long?,
-        var ownerIds: List<Long>?
+        var ownerIds: List<Long>?,
+        val type: CourseType
 ) {
     var completion: CompletionDto? = null
 }

@@ -31,13 +31,13 @@ class CourseController(val courseService: CourseService,
 
     @GetMapping
     fun getAllCourses(@AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<List<CourseDto>> {
-        val courses = courseService.getAllCourses(userPrincipal?.id)
+        val courses = courseService.getAllCourses(userPrincipal)
         return ResponseEntity.ok(courses)
     }
 
     @GetMapping("/{id}")
     fun getCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<CourseDto> {
-        val course = courseService.getCourseById(id, userPrincipal?.id)
+        val course = courseService.getCourseById(id, userPrincipal)
         return ResponseEntity.ok(course)
     }
 
@@ -45,7 +45,7 @@ class CourseController(val courseService: CourseService,
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun getCourseForEdit(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<CourseDto> {
         ownerService.checkIsAllowedToEdit(id, userPrincipal)
-        val course = courseService.getCourseByIdForEdit(id)
+        val course = courseService.getCourseByIdForEdit(id, userPrincipal)
         courseService.clearVariants(course)
         return ResponseEntity.ok(course)
     }

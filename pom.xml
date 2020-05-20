@@ -260,7 +260,17 @@
                                 <forcedType>
                                     <userType>com.dpotenko.kirillweb.dto.QuestionType</userType>
                                     <converter>com.dpotenko.kirillweb.converter.QuestionTypeConverter</converter>
-                                    <includeExpression>type</includeExpression>
+                                    <includeExpression>.*\.question\.type</includeExpression>
+                                </forcedType>
+                                <forcedType>
+                                    <userType>com.dpotenko.kirillweb.dto.CourseAccessLevel</userType>
+                                    <converter>com.dpotenko.kirillweb.converter.CourseAccessLevelConverter</converter>
+                                    <includeExpression>.*\.course_access\.access_level</includeExpression>
+                                </forcedType>
+                                <forcedType>
+                                    <userType>com.dpotenko.kirillweb.dto.CourseType</userType>
+                                    <converter>com.dpotenko.kirillweb.converter.CourseTypeConverter</converter>
+                                    <includeExpression>.*\.course\.type</includeExpression>
                                 </forcedType>
                             </forcedTypes>
                         </database>

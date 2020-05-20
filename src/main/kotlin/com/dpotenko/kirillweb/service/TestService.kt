@@ -4,24 +4,32 @@ import com.dpotenko.kirillweb.Tables.CHOSEN_VARIANT
 import com.dpotenko.kirillweb.Tables.COMPLETED_TEST
 import com.dpotenko.kirillweb.Tables.TEST
 import com.dpotenko.kirillweb.Tables.VARIANT
+import com.dpotenko.kirillweb.dto.QuestionDto
 import com.dpotenko.kirillweb.dto.QuestionStatus
+import com.dpotenko.kirillweb.dto.QuestionType
 import com.dpotenko.kirillweb.dto.TestDto
 import com.dpotenko.kirillweb.dto.VariantDto
+import com.dpotenko.kirillweb.service.question.CustomInputViewTransformer
 import com.dpotenko.kirillweb.service.question.QuestionChecker
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Test
+import com.dpotenko.kirillweb.tables.pojos.Variant
 import org.jooq.DSLContext
+import org.jsoup.Jsoup
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
+import org.springframework.web.server.ResponseStatusException
 
 @Component
 class TestService(val dslContext: DSLContext,
                   val questionService: QuestionService,
                   val variantService: VariantService,
-                  val questionChekers: List<QuestionChecker>) {
+                  val questionChekers: List<QuestionChecker>,
+                  val viewTransformers: List<CustomInputViewTransformer>) {
 
     fun saveTest(dto: TestDto,
                  courseId: Long): Long {
-        val record = dslContext.newRecord(TEST, Test(dto.id, dto.name, dto.order, courseId, false, dto.successThreshold.toLong()))
+        val record = dslContext.newRecord(TEST, Test(dto.id, dto.name, dto.order, courseId, false, dto.successThreshold.toLong(), dto.isRetryable, dto.instruction))
         if (dto.id == null) {
             record.insert()
         } else {
@@ -30,6 +38,7 @@ class TestService(val dslContext: DSLContext,
 
         return record.id
     }
+
 
     fun merge(tests: List<TestDto>,
               courseId: Long) {
@@ -59,12 +68,43 @@ class TestService(val dslContext: DSLContext,
         return testsDto
     }
 
-    fun checkTest(userTestDto: TestDto): TestDto {
-        val test = dslContext.selectFrom(TEST)
-                .where(TEST.ID.eq(userTestDto.id).and(TEST.DELETED.eq(false)))
-                .fetchOneInto(Test::class.java)
+    fun checkTestForUser(test: TestDto,
+                         userId: Long?) {
+        test.questions.forEach { question ->
+            question.variants.filter { it.inputType == "input" }.forEach {
+                it.variant = ""
+                it.isTicked = true
+            }
+        }
 
-        val testDto = mapTestToDto(test)
+        if (userId?.let { getCompletedTest(userId, test.id!!) != null } == true) {
+            test.isCompleted = true
+            for (question in test.questions) {
+                variantService.getChosenVariantsForQuestion(question.id!!, userId).forEach { variant -> markChosenVariant(question, variant) }
+            }
+            checkTest(test)
+        } else {
+            test.questions.forEach { question ->
+                question.variants.forEach {
+                    it.isRight = false
+                    it.explanation = ""
+                }
+            }
+        }
+
+        test.questions.forEach { question ->
+            if (question.type == QuestionType.CUSTOM_INPUT) {
+                val document = Jsoup.parse(question.question)
+                document.select(CSS_SELECTOR_CUSTOM_INPUTS).forEach { customInput ->
+                    viewTransformers.find { customInput.tagName() == it.tagName }?.transform(customInput)
+                }
+                question.question = document.body().html()
+            }
+        }
+    }
+
+    fun checkTest(userTestDto: TestDto,
+                  testDto: TestDto = getTestById(userTestDto.id!!)): TestDto {
         testDto.questions = questionService.getQuestionsByTestId(testDto.id!!)
 
         userTestDto.questions.forEach { userQuestion ->
@@ -81,9 +121,10 @@ class TestService(val dslContext: DSLContext,
         return userTestDto
     }
 
-    fun markAsCompleted(testDto: TestDto,
+
+    fun markAsCompleted(existingRecord: CompletedTest?,
+                        testDto: TestDto,
                         userId: Long) {
-        val existingRecord = getCompletedTest(userId, testDto.id!!)
         if (existingRecord == null) {
             val completedTest = CompletedTest()
             completedTest.userId = userId
@@ -117,14 +158,44 @@ class TestService(val dslContext: DSLContext,
         return TestDto(
                 listOf(),
                 test.name,
+                test.instruction,
                 test.orderNumber.toLong(),
                 test.id,
-                test.successThreshold.toInt()
+                test.successThreshold.toInt(),
+                test.retryable
         )
     }
 
-    fun invalidateTest(testId: Long,
+    fun getTestById(testId: Long): TestDto {
+        val test = dslContext.selectFrom(TEST)
+                .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
+                .fetchOneInto(Test::class.java)
+
+        return mapTestToDto(test)
+
+    }
+
+    fun getFullTestById(testId: Long): TestDto {
+        val test = dslContext.selectFrom(TEST)
+                .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
+                .fetchOneInto(Test::class.java)
+
+        val testDto = mapTestToDto(test)
+
+        testDto.questions = questionService.getQuestionsByTestId(testDto.id!!)
+
+        return testDto
+
+    }
+
+    fun invalidateTest(testDto: TestDto,
                        userId: Long) {
+        val testId = testDto.id!!
+
+        if (!testDto.isRetryable) {
+            throw ResponseStatusException(HttpStatus.FORBIDDEN, "You are not allowed to invalidate this test")
+        }
+
         dslContext.deleteFrom(COMPLETED_TEST)
                 .where(COMPLETED_TEST.TEST_ID.eq(testId).and(COMPLETED_TEST.USER_ID.eq(userId)))
                 .execute()
@@ -148,5 +219,20 @@ class TestService(val dslContext: DSLContext,
         }
 
 
+    }
+
+    private fun markChosenVariant(question: QuestionDto,
+                                  variant: Variant) {
+        if (variant.inputType == "input") {
+            question.variants.find { it.inputName == variant.inputName }?.let {
+                it.isTicked = true;
+                it.variant = variant.variantText;
+                it.explanation = variant.explanation;
+                it.isRight = variant.right;
+                it.id = variant.id
+            }
+        } else {
+            question.variants.find { it.id == variant.id }?.isTicked = true
+        }
     }
 }
