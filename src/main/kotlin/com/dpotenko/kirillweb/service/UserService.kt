@@ -34,6 +34,7 @@ class UserService(private val dslContext: DSLContext) {
                 .from(COMPLETED_TEST.join(USER).on(USER.ID.eq(COMPLETED_TEST.USER_ID)))
                 .where(COMPLETED_TEST.TEST_ID.eq(testId))
                 .fetchInto(User::class.java)
+                .sortedBy { it.name }
                 .map {
                     map(it)
                 }

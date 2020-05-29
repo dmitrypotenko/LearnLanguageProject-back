@@ -4,12 +4,13 @@ import com.dpotenko.kirillweb.tables.pojos.User
 import org.springframework.security.core.GrantedAuthority
 import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.core.user.OAuth2User
+import java.io.Serializable
 import java.util.Collections
 
 open class UserPrincipal(val id: Long,
                          val username: String?,
                          val password: String?,
-                         private val authorities: Collection<GrantedAuthority?>) : OAuth2User {
+                         private val authorities: Collection<GrantedAuthority?>) : OAuth2User,  Serializable {
     private var attributes: Map<String, Any>? = null
 
     val isAccountNonExpired: Boolean
@@ -49,6 +50,9 @@ open class UserPrincipal(val id: Long,
     }
 
     companion object {
+
+        private const val serialVersionUID = 20180617104123L
+
         fun create(user: User): UserPrincipal {
             val authorities: List<GrantedAuthority> = user.role.split(",").map { SimpleGrantedAuthority(it) }
             return UserPrincipal(

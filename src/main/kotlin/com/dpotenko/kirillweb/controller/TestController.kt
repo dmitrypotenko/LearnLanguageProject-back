@@ -55,4 +55,12 @@ class TestController(val testService: TestService,
     }
 
 
+    @PostMapping("/invalidate/{testId}/users/{userId}")
+    fun invalidateTestForUser(@PathVariable("testId") testId: Long, @PathVariable("userId") userId: Long,  @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<Unit> {
+        val testById = testService.getTestById(testId)
+        ownerService.checkIsAllowedToEdit(testById, userPrincipal)
+        testService.invalidateTest(testById, userId)
+        return ResponseEntity.ok().build<Unit>()
+    }
+
 }

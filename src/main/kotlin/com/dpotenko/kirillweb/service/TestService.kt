@@ -136,7 +136,7 @@ class TestService(val dslContext: DSLContext,
                         .forEach {
                             if (it.inputType == "input") {
                                 val variantDto = VariantDto(it.variant, it.isRight, it.isWrong, it.isTicked, it.explanation, null, it.inputName, it.inputType)
-                                variantDto.id = variantService.saveVariant(variantDto, questionId = question.id!!, questionType = question.type)
+                                variantDto.id = variantService.saveVariant(variantDto.copy(isRight = false), questionId = question.id!!, questionType = question.type)
                                 variantService.markAsChosenVariant(userId, variantDto)
                             } else {
                                 variantService.markAsChosenVariant(userId, it)
@@ -170,6 +170,8 @@ class TestService(val dslContext: DSLContext,
         val test = dslContext.selectFrom(TEST)
                 .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
                 .fetchOneInto(Test::class.java)
+
+
 
         return mapTestToDto(test)
 
@@ -225,10 +227,10 @@ class TestService(val dslContext: DSLContext,
                                   variant: Variant) {
         if (variant.inputType == "input") {
             question.variants.find { it.inputName == variant.inputName }?.let {
-                it.isTicked = true;
-                it.variant = variant.variantText;
-                it.explanation = variant.explanation;
-                it.isRight = variant.right;
+                it.isTicked = true
+                it.variant = variant.variantText
+                it.explanation = variant.explanation
+                it.isRight = variant.right
                 it.id = variant.id
             }
         } else {

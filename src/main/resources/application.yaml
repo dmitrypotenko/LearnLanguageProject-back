@@ -1,4 +1,10 @@
 spring:
+  session:
+    jdbc:
+      initialize-schema: never
+      schema: classpath:org/springframework/session/jdbc/schema-postgresql.sql
+      table-name: SPRING_SESSION
+    store-type: jdbc
   security:
     oauth2:
       client:

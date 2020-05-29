@@ -6,13 +6,15 @@ import org.springframework.security.core.authority.SimpleGrantedAuthority
 import org.springframework.security.oauth2.core.oidc.OidcIdToken
 import org.springframework.security.oauth2.core.oidc.OidcUserInfo
 import org.springframework.security.oauth2.core.oidc.user.OidcUser
+import java.io.Serializable
 import java.util.Collections
 
 class OidUserPrincipal(id: Long,
                        username: String?,
                        password: String?,
                        authorities: Collection<GrantedAuthority?>,
-                       private val oidcUser: OidcUser) : OidcUser, UserPrincipal(id, username, password, authorities) {
+                       private val oidcUser: OidcUser) : OidcUser, UserPrincipal(id, username, password, authorities), Serializable {
+
 
     override fun getName(): String {
         return id.toString()
@@ -31,6 +33,8 @@ class OidUserPrincipal(id: Long,
     }
 
     companion object {
+        private const val serialVersionUID = 20180617104400L
+
         fun create(user: User,
                    oidcUser: OidcUser): OidUserPrincipal {
             val authorities: List<GrantedAuthority> = user.role.split(",").map { SimpleGrantedAuthority(it) }

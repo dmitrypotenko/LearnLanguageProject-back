@@ -37,10 +37,35 @@ class OwnerService(val dslContext: DSLContext) {
         }
     }
 
+    fun checkIsAllowedToEdit(test: TestDto?,
+                             userPrincipal: UserPrincipal?) {
+        if (isSuperAdmin(userPrincipal)) {
+            return
+        }
+
+        if (test?.id == null || test.id == 0L) {
+            return
+        }
+
+        val creators = findCreatorsForTest(test.id!!)
+
+        val creatorsIds = creators.map { it.userId }
+
+        if (!creatorsIds.contains(userPrincipal?.id)) {
+            throw AccessDeniedException("You are not included in the list of creators of this course.")
+        }
+    }
+
+    private fun findCreatorsForTest(testId: Long): List<CourseAccess> {
+        return dslContext.select(*COURSE_ACCESS.fields()).from(COURSE_ACCESS.join(TEST).on(COURSE_ACCESS.COURSE_ID.eq(TEST.COURSE_ID)))
+                .where(TEST.ID.eq(testId).and(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.OWNER)))
+                .fetchInto(CourseAccess::class.java)
+    }
+
     fun isSuperAdmin(userPrincipal: UserPrincipal?) =
             userPrincipal?.authorities?.map { it?.authority }?.contains("ROLE_SUPER_ADMIN") ?: false
 
-    fun findCreators(courseId: Long?): List<CourseAccess> {
+    fun findCreators(courseId: Long): List<CourseAccess> {
         return dslContext.selectFrom(COURSE_ACCESS)
                 .where(COURSE_ACCESS.COURSE_ID.eq(courseId).and(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.OWNER)))
                 .fetchInto(CourseAccess::class.java)

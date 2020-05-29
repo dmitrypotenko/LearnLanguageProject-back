@@ -71,8 +71,8 @@ class SelectWordsChecker : QuestionChecker {
                 userVariant.explanation = actualVariant.explanation
 
                 if (userVariant.inputType == "input") {
-                    val isEquals = checkInputIsRight(userVariant, actualVariant)
-                    if (!isEquals) {
+                    val isRight = checkInputIsRight(userVariant, actualVariant)
+                    if (!isRight) {
                         toAdd.add(foundActualVariant)
                         result = false
                     }
@@ -99,7 +99,7 @@ class SelectWordsChecker : QuestionChecker {
         if (!userVariant.isTicked) {
             return false
         }
-        val transformedOption = userVariant.variant.replace("//s+".toRegex(), " ").trim()
+        val transformedOption = userVariant.variant.replace("\\s+".toRegex(), " ").trim()
         val isEquals = transformedOption.equals(actualVariant.variant, true)
         if (isEquals) {
             userVariant.isRight = true

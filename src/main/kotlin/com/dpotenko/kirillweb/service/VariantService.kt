@@ -42,9 +42,9 @@ class VariantService(val dslContext: DSLContext) {
 
 
     fun getVariantsByQuestionId(questionId: Long): MutableList<VariantDto> {
-        return dslContext.select(VARIANT.fields().toList())
+        return dslContext.selectDistinct(VARIANT.fields().toList())
                 .from(VARIANT.leftJoin(CHOSEN_VARIANT).on(VARIANT.ID.eq(CHOSEN_VARIANT.VARIANT_ID)))
-                .where(DSL.or(VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)).and(VARIANT.INPUT_TYPE.notEqual("input").or(VARIANT.INPUT_TYPE.isNull)),
+                .where(DSL.or(VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)).and(VARIANT.INPUT_TYPE.notEqual("input").or(VARIANT.INPUT_TYPE.isNull())),
                         VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)).and(VARIANT.INPUT_TYPE.eq("input").and(CHOSEN_VARIANT.ID.isNull())))
 
                 )

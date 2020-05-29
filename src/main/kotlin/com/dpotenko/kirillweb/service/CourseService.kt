@@ -111,7 +111,7 @@ class CourseService(val lessonService: LessonService,
 
 
     private fun setCreators(courseDto: CourseDto) {
-        courseDto.ownerIds = ownerService.findCreators(courseDto.id).map { it.userId }
+        courseDto.ownerIds = ownerService.findCreators(courseDto.id!!).map { it.userId }
     }
 
     fun getCourseById(id: Long,
@@ -129,6 +129,7 @@ class CourseService(val lessonService: LessonService,
             }
         }
 
+        setCreators(courseDto)
 
         return courseDto
     }

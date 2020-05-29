@@ -1,6 +1,12 @@
 package com.dpotenko.kirillweb.domain.oauth
 
-abstract class OAuth2UserInfo(var attributes: Map<String?, Any?>?) {
+import java.io.Serializable
+
+abstract class OAuth2UserInfo(var attributes: Map<String?, Any?>?): Serializable {
+
+    companion object {
+        private const val serialVersionUID = 20180617104402L
+    }
 
     abstract val id: String?
     abstract val name: String?
