@@ -7,6 +7,7 @@ import com.dpotenko.kirillweb.dto.VariantDto
 import com.dpotenko.kirillweb.tables.pojos.ChosenVariant
 import com.dpotenko.kirillweb.tables.pojos.Variant
 import org.jooq.DSLContext
+import org.jooq.Record
 import org.jooq.impl.DSL
 import org.springframework.stereotype.Component
 
@@ -28,12 +29,11 @@ class VariantService(val dslContext: DSLContext) {
     fun merge(variants: List<VariantDto>,
               questionId: Long) {
         dslContext.selectFrom(VARIANT)
-                .where(VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)))
+                .where(VARIANT.QUESTION_ID.eq(questionId).and(VARIANT.DELETED.eq(false)).and(DSL.not(VARIANT.INPUT_TYPE.eq("input")
+                        .and(VARIANT.TICKED.isTrue()).and(VARIANT.INPUT_NAME.`in`(variants.map { it.inputName })))))
                 .fetch()
                 .forEach { variantRecord ->
-                    if (variantRecord.inputType == "input" && variantRecord.ticked && variants.find { it.inputName == variantRecord.inputName } != null) {
-                        println("Skip user chosen variant")
-                    } else if (variants.find { it.id == variantRecord.id } == null) {
+                    if (variants.find { it.id == variantRecord.id } == null) {
                         variantRecord.deleted = true
                         variantRecord.store()
                     }
@@ -53,6 +53,18 @@ class VariantService(val dslContext: DSLContext) {
                 .toMutableList()
     }
 
+    fun getUserVariantsByQuestionId(questionId: Long,
+                                    userId: Long): MutableList<VariantDto> {
+        return dslContext.fetch("select variant.id, cv.id is not null as ticked, variant.wrong, variant.\"right\", variant.variant_text, variant.explanation,\n" +
+                "       variant.question_id,variant.deleted,variant.input_name, variant.input_type\n" +
+                "from variant left join chosen_variant cv on variant.id = cv.variant_id  and cv.user_id=? where variant.deleted=false and variant.question_id=?\n" +
+                "and (cv.user_id=? or cv.id is null)", userId, questionId, userId)
+                .map { record: Record -> record.into(Variant::class.java) }
+                .filterNot { variant -> variant.inputType == "input" && variant.ticked == false }
+                .map { mapVariantToDto(it) }
+                .toMutableList()
+    }
+
     fun markAsChosenVariant(userId: Long,
                             variant: VariantDto) {
         val chosenVariant = ChosenVariant()
@@ -60,14 +72,6 @@ class VariantService(val dslContext: DSLContext) {
         chosenVariant.variantId = variant.id!!
         val newRecord = dslContext.newRecord(CHOSEN_VARIANT, chosenVariant)
         newRecord.insert()
-    }
-
-    fun getChosenVariantsForQuestion(questionId: Long,
-                                     userId: Long): List<Variant> {
-        return dslContext.selectFrom(CHOSEN_VARIANT.join(VARIANT).on(CHOSEN_VARIANT.VARIANT_ID.eq(VARIANT.ID)))
-                .where(VARIANT.DELETED.eq(false).and(VARIANT.QUESTION_ID.eq(questionId))
-                        .and(CHOSEN_VARIANT.USER_ID.eq(userId)))
-                .fetchInto(Variant::class.java)
     }
 
     private fun mapVariantToDto(variant: Variant): VariantDto {

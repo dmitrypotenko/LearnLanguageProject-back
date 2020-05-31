@@ -9,7 +9,9 @@ import com.dpotenko.kirillweb.dto.CourseAccessLevel
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.dto.CourseType
 import com.dpotenko.kirillweb.dto.QuestionType
+import com.dpotenko.kirillweb.dto.VariantDto
 import com.dpotenko.kirillweb.service.question.OptionParser
+import com.dpotenko.kirillweb.service.variant.Invalidator
 import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
@@ -45,7 +47,8 @@ class CourseService(val lessonService: LessonService,
                     val attachmentService: AttachmentService,
                     val ownerService: OwnerService,
                     val dslContext: DSLContext,
-                    val optionParsers: List<OptionParser>) {
+                    val optionParsers: List<OptionParser>,
+                    val invalidator: Invalidator) {
     fun saveCourse(dto: CourseDto): CourseDto {
         val course = dslContext.newRecord(COURSE, Course(dto.name, dto.category, dto.description, dto.id, false, dto.type))
 
@@ -117,12 +120,35 @@ class CourseService(val lessonService: LessonService,
     fun getCourseById(id: Long,
                       userPrincipal: UserPrincipal?): CourseDto {
         val userId = userPrincipal?.id
-        val courseDto = getCourseByIdForEdit(id, userPrincipal)
+
+        var courseDto: CourseDto = getCourseWithLessons(id, userPrincipal)
+        courseDto.tests = testService.getTestsByCourseId(id)
+
+        courseDto.tests = courseDto.tests.map { test ->
+            if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
+                test.isCompleted = true
+                testService.fillInTestWithUserQuestions(test, userId)
+                testService.checkTest(test)
+                return@map test
+            } else {
+                testService.fillInTest(test)
+                test.questions.forEach { question ->
+                    question.variants.forEach {
+                        invalidator.invalidate(it)
+                    }
+                    val invalidatedInputFields = question.variants.filter { option -> option.inputType == "input" }.groupBy { option ->
+                        option.inputName
+                    }.map { entry -> invalidator.invalidate(entry.value[0]) }
+                    val tickedInvalidatedOptions = question.variants.filterNot { option -> option.inputType == "input" }.toMutableList()
+                    tickedInvalidatedOptions.addAll(invalidatedInputFields)
+                    question.variants = tickedInvalidatedOptions
+                }
+                return@map test
+            }
+        }
+
         setCompletion(courseDto, userId)
         userId?.let { markAsStarted(userId, courseDto.id!!) }
-        courseDto.tests.forEach { test ->
-            testService.checkTestForUser(test, userId)
-        }
         courseDto.lessons.forEach { lesson ->
             if (userId?.let { lessonService.getCompletedLesson(userId, lesson.id!!) != null } == true) {
                 lesson.isCompleted = true
@@ -137,6 +163,15 @@ class CourseService(val lessonService: LessonService,
 
     fun getCourseByIdForEdit(id: Long,
                              userPrincipal: UserPrincipal?): CourseDto {
+        val dto = getCourseWithLessons(id, userPrincipal)
+
+        dto.tests = testService.getFullTestsByCourseId(id)
+
+        return dto
+    }
+
+    private fun getCourseWithLessons(id: Long,
+                                     userPrincipal: UserPrincipal?): CourseDto {
         val course = dslContext.selectFrom(COURSE)
                 .where(COURSE.DELETED.eq(false).and(COURSE.ID.eq(id)))
                 .fetchOneInto(Course::class.java)
@@ -147,11 +182,7 @@ class CourseService(val lessonService: LessonService,
         val dto = mapCourseToDto(course)
 
         ownerService.checkAllowed(dto, userPrincipal)
-
-
         dto.lessons = lessonService.getLessonsByCourseId(id)
-        dto.tests = testService.getTestsByCourseId(id)
-
         return dto
     }
 
@@ -197,7 +228,7 @@ class CourseService(val lessonService: LessonService,
         val startedCourse = getStartedCourse(courseDto.id!!, userId)
 
         val lessons = lessonService.getLessonsByCourseId(courseDto.id!!)
-        val tests = testService.getTestsByCourseId(courseDto.id!!)
+        val tests = testService.getFullTestsByCourseId(courseDto.id!!)
 
         val completedLessons = dslContext.selectFrom(Tables.LESSON.leftJoin(Tables.COMPLETED_LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(Tables.LESSON.ID)))
                 .where(Tables.LESSON.DELETED.eq(false).and(Tables.LESSON.COURSE_ID.eq(courseDto.id)).and(Tables.COMPLETED_LESSON.USER_ID.eq(userId)))

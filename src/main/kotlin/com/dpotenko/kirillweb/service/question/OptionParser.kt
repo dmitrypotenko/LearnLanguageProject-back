@@ -35,17 +35,20 @@ class SelectOptionParser : OptionParser {
 class InputOptionParser : OptionParser {
     override fun parseOptions(input: Element): List<VariantDto> {
         val inputName = input.attr("name")
-        val option = input.attr("value")
-        return listOf(VariantDto(
-                option,
-                isRight = true,
-                isWrong = false,
-                isTicked = false,
-                explanation = "",
-                id = null,
-                inputName = inputName,
-                inputType = "input"
-        ))
+        val options = input.attr("value")
+        return options.split("|")
+                .map { option ->
+                    VariantDto(
+                            option,
+                            isRight = true,
+                            isWrong = false,
+                            isTicked = false,
+                            explanation = "",
+                            id = null,
+                            inputName = inputName,
+                            inputType = "input"
+                    )
+                }
     }
 
     override val tagName: String

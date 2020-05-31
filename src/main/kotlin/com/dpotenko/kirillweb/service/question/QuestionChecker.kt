@@ -60,36 +60,35 @@ class SelectWordsChecker : QuestionChecker {
     override fun checkQuestion(userQuestion: QuestionDto,
                                realQuestion: QuestionDto): Boolean {
         var result = true
-        if (userQuestion.variants.size != realQuestion.variants.size) {
-            result = false
-        }
         val toAdd = mutableListOf<VariantDto>()
-        userQuestion.variants.forEach { userVariant ->
+        realQuestion.variants.filter { variant -> variant.isRight }.forEach { rightOption ->
 
-            val foundActualVariant = findActualOption(realQuestion, userVariant)
-            foundActualVariant?.let { actualVariant ->
-                userVariant.explanation = actualVariant.explanation
+            val foundUserOption = findUserOption(userQuestion, rightOption)
+            foundUserOption?.let { userOption ->
+                userOption.explanation = rightOption.explanation
 
-                if (userVariant.inputType == "input") {
-                    val isRight = checkInputIsRight(userVariant, actualVariant)
-                    if (!isRight) {
-                        toAdd.add(foundActualVariant)
-                        result = false
+                if (userOption.inputType == "input") {
+                    val isRight = checkInputIsRight(userOption, rightOption)
+                    if (isRight) {
+                        userOption.isRight = true
                     }
+                    toAdd.add(rightOption)
                 } else {
-                    userVariant.id = actualVariant.id
-                    val isSelectionRight = checkSelectIsRight(userVariant, actualVariant)
-                    if (!isSelectionRight) {
-                        result = false;
-                    }
+                    userOption.isRight = true
+                    result = userOption.isTicked
                 }
             } ?: also {
                 result = false
-                userVariant.isWrong = true
             }
         }
 
-        userQuestion.variants.addAll(toAdd)
+        if (userQuestion.variants.find { variantDto -> variantDto.isTicked && !variantDto.isRight } != null) {
+            result = false
+        }
+
+        if (!result) {
+            userQuestion.variants.addAll(toAdd)
+        }
 
         return result
     }
@@ -107,33 +106,18 @@ class SelectWordsChecker : QuestionChecker {
         return isEquals
     }
 
-    private fun checkSelectIsRight(userVariant: VariantDto,
-                                   actualVariant: VariantDto): Boolean {
-        if (userVariant.isTicked && actualVariant.isRight) {
-            userVariant.isRight = true
-        } else if (actualVariant.isRight) {
-            userVariant.isRight = true
-            return false
-        } else if (userVariant.isTicked) {
-            userVariant.isWrong = true
-            return false
-        }
-
-        return true
+    private fun findUserOption(userQuestion: QuestionDto,
+                               rightOption: VariantDto): VariantDto? {
+        val foundVariants = userQuestion.variants.filter { userVariant -> checkOptionsMatching(userVariant, rightOption) }
+        return foundVariants.getOrNull(0)
     }
 
-    private fun findActualOption(realQuestion: QuestionDto,
-                                 userVariant: VariantDto): VariantDto? {
-        val foundVariant = realQuestion.variants.find { checkOptionsMatching(it, userVariant) }
-        return foundVariant
-    }
-
-    private fun checkOptionsMatching(it: VariantDto,
-                                     userVariant: VariantDto): Boolean {
-        if (userVariant.inputType == "input") {
-            return it.inputName == userVariant.inputName && !it.isTicked
+    private fun checkOptionsMatching(userVariant: VariantDto,
+                                     rightVariant: VariantDto): Boolean {
+        if (rightVariant.inputType == "input") {
+            return userVariant.inputName == rightVariant.inputName && userVariant.isTicked
         }
-        return it.variant == userVariant.variant && it.inputName == userVariant.inputName
+        return userVariant.variant == rightVariant.variant && userVariant.inputName == rightVariant.inputName
     }
 
 

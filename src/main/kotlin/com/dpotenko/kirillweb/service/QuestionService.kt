@@ -50,6 +50,19 @@ class QuestionService(val dslContext: DSLContext,
         return dtos
     }
 
+    fun getUserVersionQuestions(testId: Long, userId:Long): List<QuestionDto> {
+        val questions = dslContext.selectFrom(Tables.QUESTION)
+                .where(Tables.QUESTION.TEST_ID.eq(testId).and(Tables.QUESTION.DELETED.eq(false)))
+                .fetchInto(Question::class.java)
+
+        val dtos = questions.map { mapQuestionToDto(it) }
+
+        dtos.forEach { questionDto -> questionDto.variants = variantService.getUserVariantsByQuestionId(questionDto.id!!, userId) }
+
+        return dtos
+    }
+
+
     private fun mapQuestionToDto(question: Question): QuestionDto {
         return QuestionDto(
                 question.questionText,

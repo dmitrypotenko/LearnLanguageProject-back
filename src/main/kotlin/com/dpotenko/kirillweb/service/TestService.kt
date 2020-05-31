@@ -56,51 +56,21 @@ class TestService(val dslContext: DSLContext,
                 }
     }
 
-    fun getTestsByCourseId(courseId: Long): List<TestDto> {
-        val tests = dslContext.selectFrom(TEST)
-                .where(TEST.COURSE_ID.eq(courseId).and(TEST.DELETED.eq(false)))
-                .fetchInto(Test::class.java)
-
-        val testsDto = tests.map { mapTestToDto(it) }
+    fun getFullTestsByCourseId(courseId: Long): List<TestDto> {
+        val testsDto = getTestsByCourseId(courseId)
 
         testsDto.forEach { testDto -> testDto.questions = questionService.getQuestionsByTestId(testDto.id!!) }
 
         return testsDto
     }
 
-    fun checkTestForUser(test: TestDto,
-                         userId: Long?) {
-        test.questions.forEach { question ->
-            question.variants.filter { it.inputType == "input" }.forEach {
-                it.variant = ""
-                it.isTicked = true
-            }
-        }
+    fun getTestsByCourseId(courseId: Long): List<TestDto> {
+        val tests = dslContext.selectFrom(TEST)
+                .where(TEST.COURSE_ID.eq(courseId).and(TEST.DELETED.eq(false)))
+                .fetchInto(Test::class.java)
 
-        if (userId?.let { getCompletedTest(userId, test.id!!) != null } == true) {
-            test.isCompleted = true
-            for (question in test.questions) {
-                variantService.getChosenVariantsForQuestion(question.id!!, userId).forEach { variant -> markChosenVariant(question, variant) }
-            }
-            checkTest(test)
-        } else {
-            test.questions.forEach { question ->
-                question.variants.forEach {
-                    it.isRight = false
-                    it.explanation = ""
-                }
-            }
-        }
-
-        test.questions.forEach { question ->
-            if (question.type == QuestionType.CUSTOM_INPUT) {
-                val document = Jsoup.parse(question.question)
-                document.select(CSS_SELECTOR_CUSTOM_INPUTS).forEach { customInput ->
-                    viewTransformers.find { customInput.tagName() == it.tagName }?.transform(customInput)
-                }
-                question.question = document.body().html()
-            }
-        }
+        val testsDto = tests.map { mapTestToDto(it) }
+        return testsDto
     }
 
     fun checkTest(userTestDto: TestDto,
@@ -177,17 +147,46 @@ class TestService(val dslContext: DSLContext,
 
     }
 
-    fun getFullTestById(testId: Long): TestDto {
+    fun fillInTest(testDto: TestDto): TestDto {
+
+        testDto.questions = questionService.getQuestionsByTestId(testDto.id!!)
+        transformInputFields(testDto)
+
+        return testDto
+
+    }
+
+    fun fillInTestWithUserQuestions(testDto: TestDto, userId: Long): TestDto {
+
+        testDto.questions = questionService.getUserVersionQuestions(testDto.id!!, userId)
+        transformInputFields(testDto)
+
+        return testDto
+
+    }
+
+    fun getFullTestByIdForUser(testId: Long, userId: Long): TestDto {
         val test = dslContext.selectFrom(TEST)
                 .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
                 .fetchOneInto(Test::class.java)
 
         val testDto = mapTestToDto(test)
 
-        testDto.questions = questionService.getQuestionsByTestId(testDto.id!!)
+        fillInTestWithUserQuestions(testDto, userId)
 
         return testDto
+    }
 
+    private fun transformInputFields(testDto: TestDto) {
+        testDto.questions.forEach { question ->
+            if (question.type == QuestionType.CUSTOM_INPUT) {
+                val document = Jsoup.parse(question.question)
+                document.select(CSS_SELECTOR_CUSTOM_INPUTS).forEach { customInput ->
+                    viewTransformers.find { customInput.tagName() == it.tagName }?.transform(customInput)
+                }
+                question.question = document.body().html()
+            }
+        }
     }
 
     fun invalidateTest(testDto: TestDto,
@@ -202,7 +201,7 @@ class TestService(val dslContext: DSLContext,
                 .where(COMPLETED_TEST.TEST_ID.eq(testId).and(COMPLETED_TEST.USER_ID.eq(userId)))
                 .execute()
 
-        val variants = questionService.getQuestionsByTestId(testId)
+        val variants = questionService.getUserVersionQuestions(testId, userId)
                 .map { it.variants }
                 .reduce({ list1, list2 ->
                     val mutableList = list1.toMutableList()
@@ -218,23 +217,6 @@ class TestService(val dslContext: DSLContext,
             if (variant.isTicked && variant.inputType == "input") {
                 dslContext.deleteFrom(VARIANT).where(VARIANT.ID.eq(variant.id)).execute()
             }
-        }
-
-
-    }
-
-    private fun markChosenVariant(question: QuestionDto,
-                                  variant: Variant) {
-        if (variant.inputType == "input") {
-            question.variants.find { it.inputName == variant.inputName }?.let {
-                it.isTicked = true
-                it.variant = variant.variantText
-                it.explanation = variant.explanation
-                it.isRight = variant.right
-                it.id = variant.id
-            }
-        } else {
-            question.variants.find { it.id == variant.id }?.isTicked = true
-        }
+        } // ЭТО НЕ ДОЛЖНО РАБОТАТЬ!!!!
     }
 }
