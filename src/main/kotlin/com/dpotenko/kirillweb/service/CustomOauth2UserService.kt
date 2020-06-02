@@ -22,6 +22,7 @@ class CustomOauth2UserService(private val dslContext: DSLContext) : OAuth2UserSe
     private val delegate: OidcUserService = OidcUserService()
 
     override fun loadUser(userRequest: OidcUserRequest?): OidcUser {
+
         val oAuth2User = delegate.loadUser(userRequest)
 
         return try {

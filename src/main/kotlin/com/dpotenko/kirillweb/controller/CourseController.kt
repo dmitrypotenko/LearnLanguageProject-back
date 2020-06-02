@@ -13,7 +13,9 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import java.util.UUID
 
 @RestController
 @RequestMapping("/courses")
@@ -36,9 +38,20 @@ class CourseController(val courseService: CourseService,
     }
 
     @GetMapping("/{id}")
-    fun getCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<CourseDto> {
-        val course = courseService.getCourseById(id, userPrincipal)
+    fun getCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?,
+                  @RequestParam("key") key: String?): ResponseEntity<CourseDto> {
+        val course = courseService.getCourseById(id, userPrincipal, key)
         return ResponseEntity.ok(course)
+    }
+
+    @PostMapping("/{id}/keys")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun saveKey(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?): String {
+        ownerService.checkIsAllowedToEdit(id, userPrincipal)
+        val randomUUID = UUID.randomUUID().toString()
+        ownerService.saveKey(randomUUID, id)
+
+        return randomUUID;
     }
 
     @GetMapping("/edit/{id}")

@@ -87,6 +87,7 @@ class TestService(val dslContext: DSLContext,
                 }
             }
         }
+        userTestDto.isCompleted = true
 
         return userTestDto
     }

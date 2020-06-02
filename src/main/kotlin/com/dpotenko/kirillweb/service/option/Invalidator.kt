@@ -1,4 +1,4 @@
-package com.dpotenko.kirillweb.service.variant
+package com.dpotenko.kirillweb.service.option
 
 import com.dpotenko.kirillweb.dto.VariantDto
 import org.springframework.stereotype.Service

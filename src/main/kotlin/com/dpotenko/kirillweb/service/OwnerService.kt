@@ -7,18 +7,22 @@ import com.dpotenko.kirillweb.Tables.TEST
 import com.dpotenko.kirillweb.domain.UserPrincipal
 import com.dpotenko.kirillweb.dto.CourseAccessLevel
 import com.dpotenko.kirillweb.dto.CourseDto
+import com.dpotenko.kirillweb.dto.CourseType
 import com.dpotenko.kirillweb.dto.TestDto
+import com.dpotenko.kirillweb.dto.UserAccessVO
 import com.dpotenko.kirillweb.tables.pojos.Course
 import com.dpotenko.kirillweb.tables.pojos.CourseAccess
 import org.jooq.DSLContext
 import org.jooq.impl.DSL
 import org.springframework.http.HttpStatus
 import org.springframework.security.access.AccessDeniedException
+import org.springframework.security.web.authentication.session.SessionAuthenticationException
 import org.springframework.stereotype.Service
 import org.springframework.web.server.ResponseStatusException
 
 @Service
-class OwnerService(val dslContext: DSLContext) {
+class OwnerService(val dslContext: DSLContext,
+                   val userService: UserService) {
 
     fun checkIsAllowedToEdit(courseId: Long?,
                              userPrincipal: UserPrincipal?) {
@@ -119,15 +123,32 @@ class OwnerService(val dslContext: DSLContext) {
     }
 
     fun checkAllowed(courseDto: CourseDto,
-                     userPrincipal: UserPrincipal?) {
+                     userPrincipal: UserPrincipal?,
+                     key: String? = null) {
+        if (userPrincipal?.id == null && courseDto.type == CourseType.PRIVATE) {
+            throw SessionAuthenticationException("You must login to view this course.")
+        }
+
         val course = dslContext.select(*COURSE.fields())
                 .from(fromSupplier.invoke(userPrincipal?.id))
                 .where(COURSE.DELETED.eq(false).and(COURSE.ID.eq(courseDto.id)).and(DSL.or(startCondition, DSL.condition(isSuperAdmin(userPrincipal)))))
                 .fetchOneInto(Course::class.java)
 
         if (course == null) {
-            throw ResponseStatusException(HttpStatus.FORBIDDEN, "User ${userPrincipal?.id} don't have permissions to view course ${courseDto.id}")
+            if (key != null && courseDto.key == key && courseDto.type == CourseType.PRIVATE) {
+                userService.updateCourseAccesses(courseDto.id!!, listOf(UserAccessVO(CourseAccessLevel.STUDENT, userPrincipal?.id!!)))
+            } else {
+                throw ResponseStatusException(HttpStatus.FORBIDDEN, "User ${userPrincipal?.id} don't have permissions to view course ${courseDto.id}")
+            }
         }
+    }
+
+    fun saveKey(key: String,
+                id: Long) {
+        dslContext.update(COURSE)
+                .set(COURSE.KEY, key)
+                .where(COURSE.ID.eq(id))
+                .execute()
     }
 
 }

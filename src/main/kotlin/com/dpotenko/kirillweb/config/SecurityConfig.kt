@@ -3,9 +3,7 @@ package com.dpotenko.kirillweb.config
 import com.dpotenko.kirillweb.property.CorsProperties
 import com.dpotenko.kirillweb.service.CustomOauth2UserService
 import com.dpotenko.kirillweb.service.CustomOauth2UserServiceFacebook
-import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.beans.factory.annotation.Value
-import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.http.HttpStatus
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity
@@ -13,7 +11,6 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity
 import org.springframework.security.config.annotation.web.configuration.WebSecurityConfigurerAdapter
 import org.springframework.security.core.Authentication
-import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter
 import org.springframework.security.web.authentication.HttpStatusEntryPoint
 import org.springframework.security.web.authentication.SimpleUrlAuthenticationSuccessHandler
 import org.springframework.security.web.savedrequest.HttpSessionRequestCache
@@ -74,12 +71,14 @@ class SecurityConfig(val oauth2UserService: CustomOauth2UserService,
 
 }
 
-class SuccessRedirectHandler(val appUrl: String,val requestCache: RequestCache) : SimpleUrlAuthenticationSuccessHandler() {
+class SuccessRedirectHandler(val appUrl: String,
+                             val requestCache: RequestCache) : SimpleUrlAuthenticationSuccessHandler() {
     override fun onAuthenticationSuccess(request: HttpServletRequest?,
                                          response: HttpServletResponse?,
                                          authentication: Authentication?) {
         val savedRequest: SavedRequest? = requestCache.getRequest(request, response)
-        response?.sendRedirect(if (savedRequest == null) appUrl else savedRequest.getRedirectUrl())
+        val referer = savedRequest?.getHeaderValues("Referer")?.getOrNull(0)
+        response?.sendRedirect(referer ?: appUrl)
     }
 
 }

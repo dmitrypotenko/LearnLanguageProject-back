@@ -34,7 +34,6 @@ class TestController(val testService: TestService,
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "This test is already completed and you are not allowed to retry it.")
         }
         val checkedTest = testService.checkTest(testDto)
-        checkedTest.isCompleted = true
         userPrincipal?.let { testService.markAsCompleted(completedTest, testDto, it.id) }
         return ResponseEntity.ok(checkedTest)
     }

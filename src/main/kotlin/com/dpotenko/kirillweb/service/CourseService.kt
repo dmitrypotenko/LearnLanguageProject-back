@@ -9,9 +9,8 @@ import com.dpotenko.kirillweb.dto.CourseAccessLevel
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.dto.CourseType
 import com.dpotenko.kirillweb.dto.QuestionType
-import com.dpotenko.kirillweb.dto.VariantDto
+import com.dpotenko.kirillweb.service.option.Invalidator
 import com.dpotenko.kirillweb.service.question.OptionParser
-import com.dpotenko.kirillweb.service.variant.Invalidator
 import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
@@ -50,7 +49,7 @@ class CourseService(val lessonService: LessonService,
                     val optionParsers: List<OptionParser>,
                     val invalidator: Invalidator) {
     fun saveCourse(dto: CourseDto): CourseDto {
-        val course = dslContext.newRecord(COURSE, Course(dto.name, dto.category, dto.description, dto.id, false, dto.type))
+        val course = dslContext.newRecord(COURSE, Course(dto.name, dto.category, dto.description, dto.id, false, dto.type, dto.key))
 
         if (dto.id == null) {
             course.insert()
@@ -100,7 +99,9 @@ class CourseService(val lessonService: LessonService,
 
 
     fun getAllCourses(userPrincipal: UserPrincipal?): List<CourseDto> {
-        val courses = dslContext.select(*COURSE.fields())
+        val fields = COURSE.fields().toMutableList()
+        fields.remove(COURSE.KEY)
+        val courses = dslContext.select(*fields.toTypedArray())
                 .from(fromSupplier.invoke(userPrincipal?.id))
                 .where(COURSE.DELETED.eq(false).and(DSL.or(viewCondition, DSL.condition(ownerService.isSuperAdmin(userPrincipal)))))
                 .fetchInto(Course::class.java)
@@ -118,15 +119,15 @@ class CourseService(val lessonService: LessonService,
     }
 
     fun getCourseById(id: Long,
-                      userPrincipal: UserPrincipal?): CourseDto {
+                      userPrincipal: UserPrincipal?,
+                      key: String? = null): CourseDto {
         val userId = userPrincipal?.id
 
-        var courseDto: CourseDto = getCourseWithLessons(id, userPrincipal)
+        var courseDto: CourseDto = getCourseWithLessons(id, userPrincipal, key)
         courseDto.tests = testService.getTestsByCourseId(id)
 
         courseDto.tests = courseDto.tests.map { test ->
             if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
-                test.isCompleted = true
                 testService.fillInTestWithUserQuestions(test, userId)
                 testService.checkTest(test)
                 return@map test
@@ -171,7 +172,8 @@ class CourseService(val lessonService: LessonService,
     }
 
     private fun getCourseWithLessons(id: Long,
-                                     userPrincipal: UserPrincipal?): CourseDto {
+                                     userPrincipal: UserPrincipal?,
+                                     key: String? = null): CourseDto {
         val course = dslContext.selectFrom(COURSE)
                 .where(COURSE.DELETED.eq(false).and(COURSE.ID.eq(id)))
                 .fetchOneInto(Course::class.java)
@@ -181,7 +183,7 @@ class CourseService(val lessonService: LessonService,
 
         val dto = mapCourseToDto(course)
 
-        ownerService.checkAllowed(dto, userPrincipal)
+        ownerService.checkAllowed(dto, userPrincipal, key)
         dto.lessons = lessonService.getLessonsByCourseId(id)
         return dto
     }
@@ -205,7 +207,8 @@ class CourseService(val lessonService: LessonService,
                 emptyList(),
                 course.id,
                 mutableListOf(),
-                course.type
+                course.type,
+                course.key
         )
     }
 
