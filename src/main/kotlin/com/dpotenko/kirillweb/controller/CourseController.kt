@@ -1,6 +1,7 @@
 package com.dpotenko.kirillweb.controller
 
 import com.dpotenko.kirillweb.domain.UserPrincipal
+import com.dpotenko.kirillweb.dto.CompletionDto
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.service.CourseService
 import com.dpotenko.kirillweb.service.OwnerService
@@ -39,9 +40,23 @@ class CourseController(val courseService: CourseService,
 
     @GetMapping("/{id}")
     fun getCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?,
-                  @RequestParam("key") key: String?): ResponseEntity<CourseDto> {
+                  @RequestParam("key", required = false) key: String?,
+                  @RequestParam("groupId", required = false) assignmentId: Long?): ResponseEntity<CourseDto> {
         val course = courseService.getCourseById(id, userPrincipal, key)
         return ResponseEntity.ok(course)
+    }
+
+    @GetMapping("/completion/{id}")
+    fun getCourseCompletion(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?,
+                            @RequestParam("key", required = false) key: String?,
+                            @RequestParam("groupId", required = false) assignmentId: Long?): ResponseEntity<CompletionDto> {
+
+        userPrincipal?.id?.let {
+            val course = courseService.getCourse(id, userPrincipal, key);
+            courseService.setCompletion(course, userPrincipal.id)
+            return ResponseEntity.ok(course.completion)
+        }
+        return ResponseEntity.ok(CompletionDto(false, false, 0.0, 0.0))
     }
 
     @PostMapping("/{id}/keys")

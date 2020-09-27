@@ -108,7 +108,6 @@ class CourseService(val lessonService: LessonService,
         val dtos = courses.map {
             mapCourseToDto(it)
         }
-        dtos.forEach { setCompletion(it, userPrincipal?.id) }
         dtos.forEach { setCreators(it) }
         return dtos
     }
@@ -148,7 +147,6 @@ class CourseService(val lessonService: LessonService,
             }
         }
 
-        setCompletion(courseDto, userId)
         userId?.let { markAsStarted(userId, courseDto.id!!) }
         courseDto.lessons.forEach { lesson ->
             if (userId?.let { lessonService.getCompletedLesson(userId, lesson.id!!) != null } == true) {
@@ -174,6 +172,14 @@ class CourseService(val lessonService: LessonService,
     private fun getCourseWithLessons(id: Long,
                                      userPrincipal: UserPrincipal?,
                                      key: String? = null): CourseDto {
+        val dto = getCourse(id, userPrincipal, key)
+        dto.lessons = lessonService.getLessonsByCourseId(id)
+        return dto
+    }
+
+    fun getCourse(id: Long,
+                                     userPrincipal: UserPrincipal?,
+                                     key: String? = null): CourseDto {
         val course = dslContext.selectFrom(COURSE)
                 .where(COURSE.DELETED.eq(false).and(COURSE.ID.eq(id)))
                 .fetchOneInto(Course::class.java)
@@ -184,9 +190,9 @@ class CourseService(val lessonService: LessonService,
         val dto = mapCourseToDto(course)
 
         ownerService.checkAllowed(dto, userPrincipal, key)
-        dto.lessons = lessonService.getLessonsByCourseId(id)
         return dto
     }
+
 
     fun clearVariants(dto: CourseDto) {
         dto.tests.forEach { test ->
@@ -226,8 +232,7 @@ class CourseService(val lessonService: LessonService,
 
     }
 
-    private fun setCompletion(courseDto: CourseDto,
-                              userId: Long?) {
+    fun setCompletion(courseDto: CourseDto, userId: Long) {
         val startedCourse = getStartedCourse(courseDto.id!!, userId)
 
         val lessons = lessonService.getLessonsByCourseId(courseDto.id!!)
