@@ -3,9 +3,12 @@ package com.dpotenko.kirillweb.service
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.Tables.COURSE
 import com.dpotenko.kirillweb.Tables.COURSE_ACCESS
+import com.dpotenko.kirillweb.Tables.GROUP
+import com.dpotenko.kirillweb.Tables.GROUP_COURSE
+import com.dpotenko.kirillweb.Tables.GROUP_USER
 import com.dpotenko.kirillweb.Tables.TEST
 import com.dpotenko.kirillweb.domain.UserPrincipal
-import com.dpotenko.kirillweb.dto.CourseAccessLevel
+import com.dpotenko.kirillweb.dto.AccessLevel
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.dto.CourseType
 import com.dpotenko.kirillweb.dto.TestDto
@@ -62,7 +65,7 @@ class OwnerService(val dslContext: DSLContext,
 
     private fun findCreatorsForTest(testId: Long): List<CourseAccess> {
         return dslContext.select(*COURSE_ACCESS.fields()).from(COURSE_ACCESS.join(TEST).on(COURSE_ACCESS.COURSE_ID.eq(TEST.COURSE_ID)))
-                .where(TEST.ID.eq(testId).and(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.OWNER)))
+                .where(TEST.ID.eq(testId).and(COURSE_ACCESS.ACCESS_LEVEL.eq(AccessLevel.OWNER)))
                 .fetchInto(CourseAccess::class.java)
     }
 
@@ -71,7 +74,7 @@ class OwnerService(val dslContext: DSLContext,
 
     fun findCreators(courseId: Long): List<CourseAccess> {
         return dslContext.selectFrom(COURSE_ACCESS)
-                .where(COURSE_ACCESS.COURSE_ID.eq(courseId).and(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.OWNER)))
+                .where(COURSE_ACCESS.COURSE_ID.eq(courseId).and(COURSE_ACCESS.ACCESS_LEVEL.eq(AccessLevel.OWNER)))
                 .fetchInto(CourseAccess::class.java)
     }
 
@@ -83,7 +86,7 @@ class OwnerService(val dslContext: DSLContext,
                 .orElse(null)
 
         if (creator == null) {
-            val newRecord = dslContext.newRecord(COURSE_ACCESS, CourseAccess(null, userPrincipal?.id, courseDto.id, CourseAccessLevel.OWNER))
+            val newRecord = dslContext.newRecord(COURSE_ACCESS, CourseAccess(null, userPrincipal?.id, courseDto.id, AccessLevel.OWNER))
             newRecord.insert()
         }
     }
@@ -113,11 +116,19 @@ class OwnerService(val dslContext: DSLContext,
     fun checkAllowed(test: TestDto,
                      userPrincipal: UserPrincipal?) {
         val course = dslContext.select(*COURSE.fields())
-                .from(fromSupplier.invoke(userPrincipal?.id).join(TEST).on(TEST.ID.eq(test.id!!).and(TEST.COURSE_ID.eq(COURSE.ID))))
+                .from(fromSupplier.invoke(userPrincipal?.id)
+                        .join(TEST).on(TEST.ID.eq(test.id!!).and(TEST.COURSE_ID.eq(COURSE.ID))))
                 .where(COURSE.DELETED.eq(false).and(DSL.or(startCondition, DSL.condition(isSuperAdmin(userPrincipal)))))
                 .fetchOneInto(Course::class.java)
 
-        if (course == null) {
+        val course1 = dslContext.select(*COURSE.fields())
+                .from(COURSE.join(TEST).on(TEST.ID.eq(test.id!!).and(TEST.COURSE_ID.eq(COURSE.ID))))
+                .where(COURSE.DELETED.eq(false).and(COURSE.TYPE.notEqual(CourseType.DRAFT)))
+                .fetchOneInto(Course::class.java)
+
+
+
+        if (course == null && course1?.id?.let { isUserAndCourseInGroup(userPrincipal?.id!!, it) } != true) {
             throw ResponseStatusException(HttpStatus.FORBIDDEN, "User ${userPrincipal?.id} don't have permissions to view test ${test.id}")
         }
     }
@@ -136,8 +147,8 @@ class OwnerService(val dslContext: DSLContext,
 
         if (course == null) {
             if (key != null && courseDto.key == key && courseDto.type == CourseType.PRIVATE) {
-                userService.updateCourseAccesses(courseDto.id!!, listOf(UserAccessVO(CourseAccessLevel.STUDENT, userPrincipal?.id!!)))
-            } else {
+                userService.updateCourseAccesses(courseDto.id!!, listOf(UserAccessVO(AccessLevel.STUDENT, userPrincipal?.id!!)))
+            } else if (!isUserAndCourseInGroup(userPrincipal?.id!!, courseDto.id!!)) {
                 throw ResponseStatusException(HttpStatus.FORBIDDEN, "User ${userPrincipal?.id} don't have permissions to view course ${courseDto.id}")
             }
         }
@@ -149,6 +160,13 @@ class OwnerService(val dslContext: DSLContext,
                 .set(COURSE.KEY, key)
                 .where(COURSE.ID.eq(id))
                 .execute()
+    }
+
+    fun isUserAndCourseInGroup(userId: Long,
+                               courseId: Long): Boolean {
+        return dslContext.fetchExists(dslContext.selectFrom(GROUP.join(GROUP_USER).on(GROUP_USER.GROUP_ID.eq(GROUP.ID))
+                .join(GROUP_COURSE).on(GROUP_COURSE.GROUP_ID.eq(GROUP.ID)))
+                .where(GROUP_COURSE.COURSE_ID.eq(courseId).and(GROUP_USER.USER_ID.eq(userId)).and(GROUP.DELETED.isFalse()).and(GROUP_USER.ACCESS_LEVEL.eq(AccessLevel.STUDENT))))
     }
 
 }

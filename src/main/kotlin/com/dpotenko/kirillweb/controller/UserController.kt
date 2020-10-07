@@ -1,11 +1,15 @@
 package com.dpotenko.kirillweb.controller
 
+import com.dpotenko.kirillweb.domain.UserPrincipal
 import com.dpotenko.kirillweb.dto.UserAccess
 import com.dpotenko.kirillweb.dto.UserAccessVO
 import com.dpotenko.kirillweb.dto.UserDto
 import com.dpotenko.kirillweb.service.UserService
+import com.dpotenko.kirillweb.service.group.GroupOwnerService
+import com.dpotenko.kirillweb.service.group.GroupService
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
+import org.springframework.security.core.annotation.AuthenticationPrincipal
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -15,7 +19,8 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/users")
-class UserController(val userService: UserService) {
+class UserController(val userService: UserService,
+                     val groupService: GroupService) {
 
     @GetMapping
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
@@ -23,15 +28,31 @@ class UserController(val userService: UserService) {
         return ResponseEntity.ok(userService.getAllUsers())
     }
 
-    @GetMapping("/accesses/{courseId}")
+    @GetMapping("/accesses/courses/{courseId}")
     @PreAuthorize("hasAuthority('ROLE_ADMIN')")
     fun getSecurityModelForCourse(@PathVariable("courseId") courseId: Long): ResponseEntity<List<UserAccess>> {
         return ResponseEntity.ok(userService.getUserAccesses(courseId))
     }
 
-    @PostMapping("/accesses/{courseId}")
+    @PostMapping("/accesses/courses/{courseId}")
     fun updateCourseAccesses(@PathVariable("courseId") courseId: Long, @RequestBody updateCourseAccessRequest: UpdateCourseAccessRequest) {
         userService.updateCourseAccesses(courseId, updateCourseAccessRequest.accesses)
+    }
+
+    @PostMapping("/accesses/groups/{groupId}")
+    fun updateGroupAccesses(@PathVariable("groupId") groupId: Long, @RequestBody updateCourseAccessRequest: UpdateCourseAccessRequest) {
+        userService.updateGroupAccesses(groupId, updateCourseAccessRequest.accesses)
+    }
+
+    @GetMapping("/accesses/groups/{groupId}")
+    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
+    fun getSecurityModelForGroup(@PathVariable("groupId") groupId: Long): ResponseEntity<List<UserAccess>> {
+        return ResponseEntity.ok(userService.getGroupAccesses(groupId))
+    }
+
+    @GetMapping("/students/groups/{groupId}")
+    fun getStudentsForGroup(@PathVariable("groupId") groupId: Long): ResponseEntity<List<UserAccess>> {
+        return ResponseEntity.ok(userService.getGroupStudents(groupId))
     }
 
     @GetMapping("/tests/{testId}")

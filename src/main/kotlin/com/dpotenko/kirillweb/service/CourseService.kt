@@ -3,9 +3,10 @@ package com.dpotenko.kirillweb.service
 import com.dpotenko.kirillweb.Tables
 import com.dpotenko.kirillweb.Tables.COURSE
 import com.dpotenko.kirillweb.Tables.COURSE_ACCESS
+import com.dpotenko.kirillweb.Tables.GROUP_COURSE
 import com.dpotenko.kirillweb.domain.UserPrincipal
+import com.dpotenko.kirillweb.dto.AccessLevel
 import com.dpotenko.kirillweb.dto.CompletionDto
-import com.dpotenko.kirillweb.dto.CourseAccessLevel
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.dto.CourseType
 import com.dpotenko.kirillweb.dto.QuestionType
@@ -15,6 +16,9 @@ import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
 import com.dpotenko.kirillweb.tables.pojos.StartedCourse
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
 import org.jooq.TableOnConditionStep
 import org.jooq.impl.DSL
@@ -26,17 +30,18 @@ import org.springframework.web.server.ResponseStatusException
 const val CSS_SELECTOR_CUSTOM_INPUTS = "select,input"
 
 
-val viewCondition = DSL.or(COURSE.TYPE.eq(CourseType.DRAFT).and(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.OWNER)), COURSE.TYPE.notEqual(CourseType.DRAFT))
+val viewCondition = DSL.or(COURSE.TYPE.eq(CourseType.DRAFT).and(COURSE_ACCESS.ACCESS_LEVEL.eq(AccessLevel.OWNER)), COURSE.TYPE.notEqual(CourseType.DRAFT))
 
-val startCondition = DSL.or(COURSE.TYPE.eq(CourseType.DRAFT).and(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.OWNER)),
+val startCondition = DSL.or(COURSE.TYPE.eq(CourseType.DRAFT).and(COURSE_ACCESS.ACCESS_LEVEL.eq(AccessLevel.OWNER)),
         COURSE.TYPE.eq(CourseType.PUBLIC),
-        COURSE.TYPE.eq(CourseType.PRIVATE).and(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.OWNER).or(COURSE_ACCESS.ACCESS_LEVEL.eq(CourseAccessLevel.STUDENT)))
+        COURSE.TYPE.eq(CourseType.PRIVATE).and(COURSE_ACCESS.ACCESS_LEVEL.eq(AccessLevel.OWNER).or(COURSE_ACCESS.ACCESS_LEVEL.eq(AccessLevel.STUDENT)))
 )
 
 val fromSupplier: (Long?) -> TableOnConditionStep<*> = { userId ->
     COURSE.leftJoin(COURSE_ACCESS).on(COURSE_ACCESS.COURSE_ID.eq(COURSE.ID).and(COURSE_ACCESS.USER_ID.eq(userId
             ?: 0).or(COURSE_ACCESS.USER_ID.isNull)))
 }
+
 
 @Component
 class CourseService(val lessonService: LessonService,
@@ -112,6 +117,21 @@ class CourseService(val lessonService: LessonService,
         return dtos
     }
 
+    fun getCoursesForGroup(userPrincipal: UserPrincipal?,
+                           groupId: Long): List<CourseDto> {
+        val fields = COURSE.fields().toMutableList()
+        fields.remove(COURSE.KEY)
+        val courses = dslContext.select(*fields.toTypedArray())
+                .from(COURSE.join(GROUP_COURSE).on(GROUP_COURSE.COURSE_ID.eq(COURSE.ID)))
+                .where(COURSE.DELETED.eq(false).and(GROUP_COURSE.GROUP_ID.eq(groupId)))
+                .fetchInto(Course::class.java)
+        val dtos = courses.map {
+            mapCourseToDto(it)
+        }
+        dtos.forEach { setCreators(it) }
+        return dtos
+    }
+
 
     private fun setCreators(courseDto: CourseDto) {
         courseDto.ownerIds = ownerService.findCreators(courseDto.id!!).map { it.userId }
@@ -125,25 +145,29 @@ class CourseService(val lessonService: LessonService,
         var courseDto: CourseDto = getCourseWithLessons(id, userPrincipal, key)
         courseDto.tests = testService.getTestsByCourseId(id)
 
-        courseDto.tests = courseDto.tests.map { test ->
-            if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
-                testService.fillInTestWithUserQuestions(test, userId)
-                testService.checkTest(test)
-                return@map test
-            } else {
-                testService.fillInTest(test)
-                test.questions.forEach { question ->
-                    question.variants.forEach {
-                        invalidator.invalidate(it)
+        runBlocking {
+            for (test in courseDto.tests) {
+                launch {
+                    println("Start checking test ${test.id}")
+                    if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
+                        testService.fillInTestWithUserQuestions(test, userId)
+                        testService.checkTest(test)
+                    } else {
+                        testService.fillInTest(test)
+                        test.questions.forEach { question ->
+                            question.variants.forEach {
+                                invalidator.invalidate(it)
+                            }
+                            val invalidatedInputFields = question.variants.filter { option -> option.inputType == "input" }.groupBy { option ->
+                                option.inputName
+                            }.map { entry -> invalidator.invalidate(entry.value[0]) }
+                            val tickedInvalidatedOptions = question.variants.filterNot { option -> option.inputType == "input" }.toMutableList()
+                            tickedInvalidatedOptions.addAll(invalidatedInputFields)
+                            question.variants = tickedInvalidatedOptions
+                        }
                     }
-                    val invalidatedInputFields = question.variants.filter { option -> option.inputType == "input" }.groupBy { option ->
-                        option.inputName
-                    }.map { entry -> invalidator.invalidate(entry.value[0]) }
-                    val tickedInvalidatedOptions = question.variants.filterNot { option -> option.inputType == "input" }.toMutableList()
-                    tickedInvalidatedOptions.addAll(invalidatedInputFields)
-                    question.variants = tickedInvalidatedOptions
+                    println("Finish checking test ${test.id}")
                 }
-                return@map test
             }
         }
 
@@ -173,13 +197,14 @@ class CourseService(val lessonService: LessonService,
                                      userPrincipal: UserPrincipal?,
                                      key: String? = null): CourseDto {
         val dto = getCourse(id, userPrincipal, key)
+
         dto.lessons = lessonService.getLessonsByCourseId(id)
         return dto
     }
 
     fun getCourse(id: Long,
-                                     userPrincipal: UserPrincipal?,
-                                     key: String? = null): CourseDto {
+                  userPrincipal: UserPrincipal?,
+                  key: String? = null): CourseDto {
         val course = dslContext.selectFrom(COURSE)
                 .where(COURSE.DELETED.eq(false).and(COURSE.ID.eq(id)))
                 .fetchOneInto(Course::class.java)
@@ -232,7 +257,8 @@ class CourseService(val lessonService: LessonService,
 
     }
 
-    fun setCompletion(courseDto: CourseDto, userId: Long) {
+    fun setCompletion(courseDto: CourseDto,
+                      userId: Long) {
         val startedCourse = getStartedCourse(courseDto.id!!, userId)
 
         val lessons = lessonService.getLessonsByCourseId(courseDto.id!!)

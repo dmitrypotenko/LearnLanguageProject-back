@@ -1,10 +1,10 @@
 package com.dpotenko.kirillweb.dto
 
-data class UserAccess(val courseAccessLevel: CourseAccessLevel,
+data class UserAccess(val accessLevel: AccessLevel,
                       val userDto: UserDto) {
 
 }
 
 
-data class UserAccessVO(val courseAccessLevel: CourseAccessLevel,
+data class UserAccessVO(val accessLevel: AccessLevel,
                         val userId: Long)

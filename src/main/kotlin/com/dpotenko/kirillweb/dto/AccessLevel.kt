@@ -1,6 +1,6 @@
 package com.dpotenko.kirillweb.dto
 
-enum class CourseAccessLevel {
+enum class AccessLevel {
     STUDENT,
     OWNER,
     NONE

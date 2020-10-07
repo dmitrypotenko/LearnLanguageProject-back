@@ -13,3 +13,4 @@ data class CourseDto(
 ) {
     var completion: CompletionDto? = null
 }
+

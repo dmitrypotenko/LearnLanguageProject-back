@@ -5,6 +5,7 @@ import com.dpotenko.kirillweb.dto.CompletionDto
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.service.CourseService
 import com.dpotenko.kirillweb.service.OwnerService
+import org.springframework.http.HttpStatus
 import org.springframework.http.ResponseEntity
 import org.springframework.security.access.prepost.PreAuthorize
 import org.springframework.security.core.annotation.AuthenticationPrincipal
@@ -16,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestBody
 import org.springframework.web.bind.annotation.RequestMapping
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RestController
+import org.springframework.web.server.ResponseStatusException
 import java.util.UUID
 
 @RestController
@@ -40,9 +42,9 @@ class CourseController(val courseService: CourseService,
 
     @GetMapping("/{id}")
     fun getCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?,
-                  @RequestParam("key", required = false) key: String?,
-                  @RequestParam("groupId", required = false) assignmentId: Long?): ResponseEntity<CourseDto> {
+                  @RequestParam("key", required = false) key: String?): ResponseEntity<CourseDto> {
         val course = courseService.getCourseById(id, userPrincipal, key)
+        println("return course")
         return ResponseEntity.ok(course)
     }
 
@@ -52,7 +54,14 @@ class CourseController(val courseService: CourseService,
                             @RequestParam("groupId", required = false) assignmentId: Long?): ResponseEntity<CompletionDto> {
 
         userPrincipal?.id?.let {
-            val course = courseService.getCourse(id, userPrincipal, key);
+            val course = try {
+                courseService.getCourse(id, userPrincipal, key)
+            } catch (e: ResponseStatusException) {
+                if (e.status != HttpStatus.FORBIDDEN) {
+                    throw e
+                }
+               return ResponseEntity.ok(CompletionDto(false, false, 0.0, 0.0))
+            }
             courseService.setCompletion(course, userPrincipal.id)
             return ResponseEntity.ok(course.completion)
         }
@@ -83,5 +92,13 @@ class CourseController(val courseService: CourseService,
     fun deleteCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?) {
         ownerService.checkIsAllowedToEdit(id, userPrincipal)
         courseService.deleteCourseById(id)
+    }
+
+    @GetMapping("/groups/{groupId}")
+    fun getCoursesForGroup(
+            @PathVariable("groupId") groupId: Long,
+            @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<List<CourseDto>> {
+        val courses = courseService.getCoursesForGroup(userPrincipal, groupId)
+        return ResponseEntity.ok(courses)
     }
 }
