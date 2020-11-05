@@ -23,8 +23,8 @@ class FileController(val fileService: FileService) {
 
     @PostMapping("/upload")
      @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    fun handleFileUpload1(@RequestParam("upload") file: MultipartFile): ResponseEntity<UploadResponseCk> {
-        return ResponseEntity.ok(UploadResponseCk(fileService.uploadImageFile(file)))
+    fun handleFileUpload1(@RequestParam("file") file: MultipartFile): ResponseEntity<UploadResponse> {
+        return ResponseEntity.ok(UploadResponse(fileService.uploadImageFile(file)))
     }
 
 }

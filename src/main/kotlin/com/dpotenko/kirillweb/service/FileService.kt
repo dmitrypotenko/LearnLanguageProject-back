@@ -12,6 +12,7 @@ import java.io.File
 import java.io.FileInputStream
 import java.util.ArrayList
 import java.util.Arrays
+import java.util.Date
 import javax.annotation.PostConstruct
 
 @Component
@@ -35,28 +36,26 @@ class FileService {
 
     fun uploadImageFile(fileStream: MultipartFile): String {
 
-        val fileName: String = fileStream.originalFilename
+        val fileName: String = Date().time.toString() + fileStream.originalFilename
 
         val blobInfo: BlobInfo = storage.create(
                 BlobInfo
                         .newBuilder("dpotenko", fileName) // Modify access list to allow all users with link to read file
                         .setContentType("image/" + fileName.substringAfterLast("."))
-                        .setAcl(ArrayList(Arrays.asList(Acl.of(Acl.User.ofAllUsers(), Acl.Role.READER))))
                         .build(),
                 fileStream.inputStream)
         // return the public download link
         // return the public download link
-        return "https://storage.cloud.google.com/${blobInfo.bucket}/${blobInfo.name}"
+        return "https://storage.googleapis.com/${blobInfo.bucket}/${blobInfo.name}"
     }
 
     fun uploadAnyFile(fileStream: MultipartFile): String {
 
-        val fileName: String = fileStream.originalFilename
+        val fileName: String = Date().time.toString() + fileStream.originalFilename
 
         val blobInfo: BlobInfo = storage.create(
                 BlobInfo
                         .newBuilder("dpotenko", fileName) // Modify access list to allow all users with link to read file
-                        .setAcl(ArrayList(Arrays.asList(Acl.of(Acl.User.ofAllUsers(), Acl.Role.READER))))
                         .build(),
                 fileStream.inputStream)
         // return the public download link
