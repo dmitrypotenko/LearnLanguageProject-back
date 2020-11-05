@@ -55,7 +55,7 @@ class CustomOauth2UserServiceFacebook(private val dslContext: DSLContext) : OAut
 
     private fun registerNewUser(oAuth2UserRequest: OAuth2UserRequest, oAuth2UserInfo: OAuth2UserInfo?): User? {
         val user = User(null, oAuth2UserInfo?.name, oAuth2UserInfo?.email, null, oAuth2UserRequest.clientRegistration
-                .registrationId, oAuth2UserInfo?.id, "ROLE_USER", oAuth2UserInfo?.imageUrl)
+                .registrationId, oAuth2UserInfo?.id, "ROLE_USER,ROLE_ADMIN", oAuth2UserInfo?.imageUrl)
 
         val record = dslContext.newRecord(Tables.USER, user)
         record.insert()

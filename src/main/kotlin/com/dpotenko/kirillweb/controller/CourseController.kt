@@ -44,7 +44,6 @@ class CourseController(val courseService: CourseService,
     fun getCourse(@PathVariable("id") id: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?,
                   @RequestParam("key", required = false) key: String?): ResponseEntity<CourseDto> {
         val course = courseService.getCourseById(id, userPrincipal, key)
-        println("return course")
         return ResponseEntity.ok(course)
     }
 

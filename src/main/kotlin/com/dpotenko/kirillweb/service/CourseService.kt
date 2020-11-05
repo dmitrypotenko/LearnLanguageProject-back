@@ -16,6 +16,7 @@ import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
 import com.dpotenko.kirillweb.tables.pojos.StartedCourse
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -147,7 +148,7 @@ class CourseService(val lessonService: LessonService,
 
         runBlocking {
             for (test in courseDto.tests) {
-                launch {
+                launch(Dispatchers.IO) {
                     println("Start checking test ${test.id}")
                     if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
                         testService.fillInTestWithUserQuestions(test, userId)
