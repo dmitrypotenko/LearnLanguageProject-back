@@ -2,6 +2,7 @@ package com.dpotenko.kirillweb.controller
 
 import com.dpotenko.kirillweb.controller.validate.TestDataValidator
 import com.dpotenko.kirillweb.domain.UserPrincipal
+import com.dpotenko.kirillweb.dto.LessonDto
 import com.dpotenko.kirillweb.dto.TestDto
 import com.dpotenko.kirillweb.service.OwnerService
 import com.dpotenko.kirillweb.service.TestService
@@ -66,4 +67,9 @@ class TestController(val testService: TestService,
         return ResponseEntity.ok().build<Unit>()
     }
 
+    @GetMapping("/{testId}")
+    fun getFullTest(@PathVariable testId: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?): TestDto {
+        val testDto = testService.getTestById(testId)
+        return testService.prepareTest(testDto, userPrincipal?.id)
+    }
 }

@@ -1,6 +1,7 @@
 package com.dpotenko.kirillweb.service
 
 import com.dpotenko.kirillweb.Tables
+import com.dpotenko.kirillweb.Tables.LESSON
 import com.dpotenko.kirillweb.dto.LessonDto
 import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.Lesson
@@ -15,7 +16,7 @@ class LessonService(val dslContext: DSLContext,
                    courseId: Long): Long {
 
         val lesson = Lesson(dto.id, dto.lessonText, dto.name, dto.order, dto.videoLink, courseId, false, null)
-        val record = dslContext.newRecord(Tables.LESSON, lesson)
+        val record = dslContext.newRecord(LESSON, lesson)
         val fieldToChange = record.fields("lesson_text",
                 "name",
                 "order_number",
@@ -33,8 +34,8 @@ class LessonService(val dslContext: DSLContext,
 
     fun merge(lessons: List<LessonDto>,
               courseId: Long) {
-        dslContext.selectFrom(Tables.LESSON)
-                .where(Tables.LESSON.COURSE_ID.eq(courseId).and(Tables.LESSON.DELETED.eq(false)))
+        dslContext.selectFrom(LESSON)
+                .where(LESSON.COURSE_ID.eq(courseId).and(LESSON.DELETED.eq(false)))
                 .fetch()
                 .forEach { lessonRecord ->
                     val foundLesson = lessons.find { it.id == lessonRecord.id }
@@ -48,8 +49,8 @@ class LessonService(val dslContext: DSLContext,
     }
 
     fun getLessonsByCourseId(courseId: Long): List<LessonDto> {
-        val lessons = dslContext.selectFrom(Tables.LESSON)
-                .where(Tables.LESSON.COURSE_ID.eq(courseId).and(Tables.LESSON.DELETED.eq(false)))
+        val lessons = dslContext.selectFrom(LESSON)
+                .where(LESSON.COURSE_ID.eq(courseId).and(LESSON.DELETED.eq(false)))
                 .fetchInto(Lesson::class.java)
 
         val lessonsDto = lessons.map { mapLessonToDto(it) }
@@ -57,6 +58,22 @@ class LessonService(val dslContext: DSLContext,
         lessonsDto.forEach { lesson -> lesson.attachments = attachmentService.getAttachmentsByLessonId(lesson.id!!) }
 
         return lessonsDto
+    }
+
+    fun getLessonsMetaByCourseId(courseId: Long): List<LessonDto> {
+        val lessons = dslContext.select(LESSON.ID, LESSON.COURSE_ID, LESSON.NAME, LESSON.ORDER_NUMBER).from(LESSON)
+                .where(LESSON.COURSE_ID.eq(courseId).and(LESSON.DELETED.eq(false)))
+                .fetchInto(Lesson::class.java)
+
+        return lessons.map { mapLessonToDto(it) }
+    }
+
+    fun getLessonsById(id: Long): LessonDto {
+        val lesson = dslContext.selectFrom(LESSON)
+                .where(LESSON.ID.eq(id).and(LESSON.DELETED.eq(false)))
+                .fetchOneInto(Lesson::class.java)
+
+        return mapLessonToDto(lesson)
     }
 
     fun markAsCompleted(lessonId: Long,
@@ -72,8 +89,8 @@ class LessonService(val dslContext: DSLContext,
 
     fun getCompletedLesson(userId: Long,
                            lessonId: Long): CompletedLesson? {
-        return dslContext.selectFrom(Tables.COMPLETED_LESSON.join(Tables.LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(Tables.LESSON.ID)))
-                .where(Tables.LESSON.DELETED.eq(false).and(Tables.LESSON.ID.eq(lessonId))
+        return dslContext.selectFrom(Tables.COMPLETED_LESSON.join(LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(LESSON.ID)))
+                .where(LESSON.DELETED.eq(false).and(LESSON.ID.eq(lessonId))
                         .and(Tables.COMPLETED_LESSON.USER_ID.eq(userId)))
                 .fetchOneInto(CompletedLesson::class.java)
     }
@@ -81,7 +98,7 @@ class LessonService(val dslContext: DSLContext,
     private fun mapLessonToDto(lesson: Lesson): LessonDto {
         return LessonDto(
                 lesson.videoLink,
-                lesson.lessonText,
+                lesson.lessonText?:"",
                 lesson.name,
                 listOf(),
                 lesson.orderNumber.toLong(),

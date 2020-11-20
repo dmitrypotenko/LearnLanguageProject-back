@@ -10,14 +10,12 @@ import com.dpotenko.kirillweb.dto.CompletionDto
 import com.dpotenko.kirillweb.dto.CourseDto
 import com.dpotenko.kirillweb.dto.CourseType
 import com.dpotenko.kirillweb.dto.QuestionType
-import com.dpotenko.kirillweb.service.option.Invalidator
 import com.dpotenko.kirillweb.service.question.OptionParser
 import com.dpotenko.kirillweb.tables.pojos.CompletedLesson
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Course
 import com.dpotenko.kirillweb.tables.pojos.StartedCourse
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.jooq.DSLContext
@@ -52,8 +50,7 @@ class CourseService(val lessonService: LessonService,
                     val attachmentService: AttachmentService,
                     val ownerService: OwnerService,
                     val dslContext: DSLContext,
-                    val optionParsers: List<OptionParser>,
-                    val invalidator: Invalidator) {
+                    val optionParsers: List<OptionParser>) {
     fun saveCourse(dto: CourseDto): CourseDto {
         val course = dslContext.newRecord(COURSE, Course(dto.name, dto.category, dto.description, dto.id, false, dto.type, dto.key))
 
@@ -143,31 +140,16 @@ class CourseService(val lessonService: LessonService,
                       key: String? = null): CourseDto {
         val userId = userPrincipal?.id
 
-        var courseDto: CourseDto = getCourseWithLessons(id, userPrincipal, key)
+        val courseDto = getCourse(id, userPrincipal, key)
+        courseDto.lessons = lessonService.getLessonsMetaByCourseId(courseDto.id!!)
         courseDto.tests = testService.getTestsByCourseId(id)
 
         runBlocking {
             for (test in courseDto.tests) {
                 launch(Dispatchers.IO) {
-                    println("Start checking test ${test.id}")
                     if (userId?.let { testService.getCompletedTest(userId, test.id!!) != null } == true) {
-                        testService.fillInTestWithUserQuestions(test, userId)
-                        testService.checkTest(test)
-                    } else {
-                        testService.fillInTest(test)
-                        test.questions.forEach { question ->
-                            question.variants.forEach {
-                                invalidator.invalidate(it)
-                            }
-                            val invalidatedInputFields = question.variants.filter { option -> option.inputType == "input" }.groupBy { option ->
-                                option.inputName
-                            }.map { entry -> invalidator.invalidate(entry.value[0]) }
-                            val tickedInvalidatedOptions = question.variants.filterNot { option -> option.inputType == "input" }.toMutableList()
-                            tickedInvalidatedOptions.addAll(invalidatedInputFields)
-                            question.variants = tickedInvalidatedOptions
-                        }
+                        test.isCompleted = true
                     }
-                    println("Finish checking test ${test.id}")
                 }
             }
         }
@@ -262,7 +244,7 @@ class CourseService(val lessonService: LessonService,
                       userId: Long) {
         val startedCourse = getStartedCourse(courseDto.id!!, userId)
 
-        val lessons = lessonService.getLessonsByCourseId(courseDto.id!!)
+        val lessons = lessonService.getLessonsMetaByCourseId(courseDto.id!!)
         val tests = testService.getFullTestsByCourseId(courseDto.id!!)
 
         val completedLessons = dslContext.selectFrom(Tables.LESSON.leftJoin(Tables.COMPLETED_LESSON).on(Tables.COMPLETED_LESSON.LESSON_ID.eq(Tables.LESSON.ID)))

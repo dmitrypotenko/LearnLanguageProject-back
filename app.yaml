@@ -7,5 +7,9 @@ env_variables:
 
 automatic_scaling:
   max_instances: 5
+  min_instances: 1
+
+inbound_services:
+  - warmup
 
 

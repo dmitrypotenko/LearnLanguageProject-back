@@ -3,46 +3,42 @@ package com.dpotenko.kirillweb.service.sitemap
 import com.dpotenko.kirillweb.dto.CourseType
 import com.dpotenko.kirillweb.service.CourseService
 import com.dpotenko.kirillweb.service.LessonService
-import com.dpotenko.kirillweb.service.TestService
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlElementWrapper
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlProperty
 import com.fasterxml.jackson.dataformat.xml.annotation.JacksonXmlRootElement
 import org.springframework.stereotype.Service
 import java.time.LocalDate
 
-const val defaultPriority = 0.51
+const val defaultPriority = 0.50
 const val sitemapItemTemplate = "https://lessonsbox.com/courses/"
 
 @Service
 class SitemapService(private val courseService: CourseService,
-                     private val lessonService: LessonService,
-                     private val testService: TestService) {
+                     private val lessonService: LessonService) {
 
     private val defaultRoutes = listOf(
             UrlDetails("https://lessonsbox.com/", LocalDate.now(), 1.0),
-            UrlDetails("https://lessonsbox.com/courses", LocalDate.now(), 0.80),
-            UrlDetails("https://lessonsbox.com/courses/create", LocalDate.now(), 0.80),
-            UrlDetails("https://lessonsbox.com/welcome", LocalDate.now(), 0.80),
-            UrlDetails("https://lessonsbox.com/policy", LocalDate.now(), 0.80),
-            UrlDetails("https://lessonsbox.com/teachers", LocalDate.now(), 0.80),
-            UrlDetails("https://lessonsbox.com/groups", LocalDate.now(), 0.80)
+            UrlDetails("https://lessonsbox.com/courses", LocalDate.now(), 0.10),
+            UrlDetails("https://lessonsbox.com/courses/create", LocalDate.now(), 0.10),
+            UrlDetails("https://lessonsbox.com/welcome", LocalDate.now(), 0.10),
+            UrlDetails("https://lessonsbox.com/policy", LocalDate.now(), 0.10),
+            UrlDetails("https://lessonsbox.com/teachers", LocalDate.now(), 0.10),
+            UrlDetails("https://lessonsbox.com/groups", LocalDate.now(), 0.10)
     )
 
     fun generate(): UrlsSet {
         val allCourses = courseService.getAllCourses(null).filter { it.type == CourseType.PUBLIC }
         allCourses.forEach { courseDto ->
-            courseDto.lessons = lessonService.getLessonsByCourseId(courseDto.id!!)
-            courseDto.tests = testService.getTestsByCourseId(courseDto.id!!)
+            courseDto.lessons = lessonService.getLessonsMetaByCourseId(courseDto.id!!)
         }
 
-        val coursesSitemapInfo = allCourses.map { courseDto -> CourseSitemapInfo(courseDto.id!!, courseDto.lessons.size + courseDto.tests.size) }
-
-        val urlDetailsByCourses = coursesSitemapInfo.flatMap { coursesSitemapInfo ->
-            var i = 0;
+        val urlDetailsByCourses = allCourses.flatMap { course ->
+            var i = 0
             val urlDetails = mutableListOf<UrlDetails>()
-            while (i < coursesSitemapInfo.steps) {
-                urlDetails.add(UrlDetails(sitemapItemTemplate + coursesSitemapInfo.id + "/steps/" + i, LocalDate.now(), defaultPriority))
-                i++;
+            while (i < course.lessons.size) {
+                val lesson = course.lessons[i]
+                urlDetails.add(UrlDetails(sitemapItemTemplate + course.id + "/" + formatNameToUrlFragment(course.name) + "/steps/" + lesson.order + "/" + formatNameToUrlFragment(lesson.name!!), LocalDate.now(), defaultPriority))
+                i++
             }
             return@flatMap urlDetails
         }
@@ -50,6 +46,9 @@ class SitemapService(private val courseService: CourseService,
         return UrlsSet(defaultRoutes.plus(urlDetailsByCourses))
     }
 
+    fun formatNameToUrlFragment(name: String): String {
+        return name.replace(Regex("[.,\\/#!\$%\\^&\\*;:{}=\\-_`~()+]"), "").toLowerCase().replace(Regex(" +"), "-");
+    }
 }
 
 
@@ -73,6 +72,3 @@ data class UrlDetails(
         val lastmod: LocalDate,
         val priority: Double
 )
-
-private data class CourseSitemapInfo(val id: Long,
-                                     val steps: Int)

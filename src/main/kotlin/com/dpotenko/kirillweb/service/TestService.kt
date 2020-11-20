@@ -4,16 +4,15 @@ import com.dpotenko.kirillweb.Tables.CHOSEN_VARIANT
 import com.dpotenko.kirillweb.Tables.COMPLETED_TEST
 import com.dpotenko.kirillweb.Tables.TEST
 import com.dpotenko.kirillweb.Tables.VARIANT
-import com.dpotenko.kirillweb.dto.QuestionDto
 import com.dpotenko.kirillweb.dto.QuestionStatus
 import com.dpotenko.kirillweb.dto.QuestionType
 import com.dpotenko.kirillweb.dto.TestDto
 import com.dpotenko.kirillweb.dto.VariantDto
+import com.dpotenko.kirillweb.service.option.Invalidator
 import com.dpotenko.kirillweb.service.question.CustomInputViewTransformer
 import com.dpotenko.kirillweb.service.question.QuestionChecker
 import com.dpotenko.kirillweb.tables.pojos.CompletedTest
 import com.dpotenko.kirillweb.tables.pojos.Test
-import com.dpotenko.kirillweb.tables.pojos.Variant
 import org.jooq.DSLContext
 import org.jsoup.Jsoup
 import org.springframework.http.HttpStatus
@@ -25,7 +24,8 @@ class TestService(val dslContext: DSLContext,
                   val questionService: QuestionService,
                   val variantService: VariantService,
                   val questionChekers: List<QuestionChecker>,
-                  val viewTransformers: List<CustomInputViewTransformer>) {
+                  val viewTransformers: List<CustomInputViewTransformer>,
+                  val invalidator: Invalidator) {
 
     fun saveTest(dto: TestDto,
                  courseId: Long): Long {
@@ -142,10 +142,29 @@ class TestService(val dslContext: DSLContext,
                 .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
                 .fetchOneInto(Test::class.java)
 
-
-
         return mapTestToDto(test)
 
+    }
+
+    fun prepareTest(test: TestDto, userId: Long?): TestDto {
+        if (userId?.let { getCompletedTest(userId, test.id!!) != null } == true) {
+            fillInTestWithUserQuestions(test, userId)
+            checkTest(test)
+        } else {
+            fillInTest(test)
+            test.questions.forEach { question ->
+                question.variants.forEach {
+                    invalidator.invalidate(it)
+                }
+                val invalidatedInputFields = question.variants.filter { option -> option.inputType == "input" }.groupBy { option ->
+                    option.inputName
+                }.map { entry -> invalidator.invalidate(entry.value[0]) }
+                val tickedInvalidatedOptions = question.variants.filterNot { option -> option.inputType == "input" }.toMutableList()
+                tickedInvalidatedOptions.addAll(invalidatedInputFields)
+                question.variants = tickedInvalidatedOptions
+            }
+        }
+        return test
     }
 
     fun fillInTest(testDto: TestDto): TestDto {
@@ -157,7 +176,8 @@ class TestService(val dslContext: DSLContext,
 
     }
 
-    fun fillInTestWithUserQuestions(testDto: TestDto, userId: Long): TestDto {
+    fun fillInTestWithUserQuestions(testDto: TestDto,
+                                    userId: Long): TestDto {
 
         testDto.questions = questionService.getUserVersionQuestions(testDto.id!!, userId)
         transformInputFields(testDto)
@@ -166,7 +186,8 @@ class TestService(val dslContext: DSLContext,
 
     }
 
-    fun getFullTestByIdForUser(testId: Long, userId: Long): TestDto {
+    fun getFullTestByIdForUser(testId: Long,
+                               userId: Long): TestDto {
         val test = dslContext.selectFrom(TEST)
                 .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
                 .fetchOneInto(Test::class.java)
