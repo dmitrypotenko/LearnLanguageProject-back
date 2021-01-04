@@ -68,25 +68,9 @@
             <artifactId>spring-boot-starter-tomcat</artifactId>
         </dependency>
         <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.security</groupId>
-            <artifactId>spring-security-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-        <dependency>
             <groupId>org.jetbrains.kotlin</groupId>
             <artifactId>kotlin-stdlib</artifactId>
             <version>${kotlin.version}</version>
-        </dependency>
-        <dependency>
-            <groupId>org.jetbrains.kotlin</groupId>
-            <artifactId>kotlin-test-junit</artifactId>
-            <version>${kotlin.version}</version>
-            <scope>test</scope>
         </dependency>
         <dependency>
             <groupId>com.google.cloud</groupId>
@@ -166,7 +150,7 @@
                     </compilerPlugins>
                     <jvmTarget>11</jvmTarget>
                     <pluginOptions>
-                        no-arg:annotation=com.dpotenko.kirillweb.dto.JooqEntity
+                        no-arg:annotation=com.dpotenko.lessonsbox.dto.JooqEntity
                     </pluginOptions>
                 </configuration>
                 <dependencies>
@@ -271,29 +255,29 @@
                                     <includeTypes>tinyint.*</includeTypes>
                                 </forcedType>
                                 <forcedType>
-                                    <userType>com.dpotenko.kirillweb.dto.QuestionType</userType>
-                                    <converter>com.dpotenko.kirillweb.converter.QuestionTypeConverter</converter>
+                                    <userType>com.dpotenko.lessonsbox.dto.QuestionType</userType>
+                                    <converter>com.dpotenko.lessonsbox.converter.QuestionTypeConverter</converter>
                                     <includeExpression>.*\.question\.type</includeExpression>
                                 </forcedType>
                                 <forcedType>
-                                    <userType>com.dpotenko.kirillweb.dto.AccessLevel</userType>
-                                    <converter>com.dpotenko.kirillweb.converter.AccessLevelConverter</converter>
+                                    <userType>com.dpotenko.lessonsbox.dto.AccessLevel</userType>
+                                    <converter>com.dpotenko.lessonsbox.converter.AccessLevelConverter</converter>
                                     <includeExpression>.*\.course_access\.access_level</includeExpression>
                                 </forcedType>
                                 <forcedType>
-                                    <userType>com.dpotenko.kirillweb.dto.AccessLevel</userType>
-                                    <converter>com.dpotenko.kirillweb.converter.AccessLevelConverter</converter>
+                                    <userType>com.dpotenko.lessonsbox.dto.AccessLevel</userType>
+                                    <converter>com.dpotenko.lessonsbox.converter.AccessLevelConverter</converter>
                                     <includeExpression>.*\.group_user\.access_level</includeExpression>
                                 </forcedType>
                                 <forcedType>
-                                    <userType>com.dpotenko.kirillweb.dto.CourseType</userType>
-                                    <converter>com.dpotenko.kirillweb.converter.CourseTypeConverter</converter>
+                                    <userType>com.dpotenko.lessonsbox.dto.CourseType</userType>
+                                    <converter>ёcom.dpotenko.lessonsbox.converter.CourseTypeConverter</converter>
                                     <includeExpression>.*\.course\.type</includeExpression>
                                 </forcedType>
                             </forcedTypes>
                         </database>
                         <target>
-                            <packageName>com.dpotenko.kirillweb</packageName>
+                            <packageName>com.dpotenko.lessonsbox</packageName>
                             <directory>${jooq-codegen-maven.directory}</directory>
                             <encoding>UTF-8</encoding>
                             <clean>true</clean>
@@ -314,7 +298,7 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <mainClass>com.dpotenko.kirillweb.KirillWebApplication</mainClass>
+                    <mainClass>com.dpotenko.lessonsbox.KirillWebApplication</mainClass>
                     <outputDirectory>./</outputDirectory>
                 </configuration>
                 <executions>
