@@ -1,6 +1,12 @@
 spring:
+  cloud:
+    gcp:
+      project-id: or2-msq-epm-ldi-t1iylu
+      credentials:
+        location: file:C:\projects\creds\EPM-LDI-5e253af63c24.json
+
   main:
-    lazy-initialization: true
+    lazy-initialization: false
   session:
     jdbc:
       initialize-schema: never
@@ -13,10 +19,10 @@ spring:
         registration:
           google:
             client-id: 514342237226-6kf495bld2ud832b5tesqsugokvcidf9.apps.googleusercontent.com
-            client-secret: lRK6c9PHmTZDnMaPTvgcHRhE
+            client-secret: ${sm://projects/932424062751/secrets/google-local-oauth-secret}
           facebook:
             client-id: 1048731185333188
-            client-secret: 8d9815e3951dff92140e91408f15910e
+            client-secret: ${sm://projects/932424062751/secrets/facebook-local-oauth-secret}
             scope: ["public_profile", "email"]
 
   servlet:
@@ -49,5 +55,3 @@ server:
       timeout: '1440m'
 
 app.url: "http://localhost:4200/welcome"
-
-google.storage: 'C:\projects\creds\PotenkoProject-139e858a53e7.json'

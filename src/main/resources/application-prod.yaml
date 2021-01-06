@@ -6,16 +6,19 @@ spring:
         registration:
           google:
             client-id: 514342237226-c30rp9cusapgkm5osk37s9emkrreh5tl.apps.googleusercontent.com
-            client-secret: sgK8cZDhFbBEMrrQigOKRCEd
+            client-secret: ${sm://projects/932424062751/secrets/google-oauth-secret}
           facebook:
             client-id: 1057163594670284
-            client-secret: 44864383ec1dc7e73fd771e0db750435
+            client-secret: ${sm://projects/932424062751/secrets/facebook-oauth-secret}
+  cloud:
+    gcp:
+      sql:
+        database-name: postgres
+        instance-connection-name: or2-msq-epm-ldi-t1iylu:europe-west1:lessonsbox-db
 
   datasource:
-    driver-class-name=com: org.postgresql.Driver
-    url: jdbc:postgresql://google/postgres?sslmode=disable&cloudSqlInstance=potenkoproject:us-central1:dpotenko-postgres&socketFactory=com.google.cloud.sql.postgres.SocketFactory
     username: postgres
-    password: QW5wNgngp3wa#
+    password: ${sm://projects/932424062751/secrets/db-pass}
   level:
     org.springframework.security: INFO
 

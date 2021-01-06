@@ -16,8 +16,8 @@ class SearchService(private val dslContext: DSLContext) {
                 "       ts_headline('simple', l.name || ' ' || l.lesson_text, query) as matchedExtract,\n" +
                 "       l.order_number                                               as orderNumber,\n" +
                 "       l.course_id                                                  as courseId\n" +
-                "FROM lesson l\n" +
-                "         join course c on l.course_id = c.id,\n" +
+                "FROM principal.lesson l\n" +
+                "         join principal.course c on l.course_id = c.id,\n" +
                 "     websearch_to_tsquery('simple', ?) query\n" +
                 "WHERE l.deleted = FALSE\n" +
                 "  and c.deleted = FALSE\n" +
