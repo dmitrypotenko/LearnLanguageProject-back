@@ -1,39 +1,33 @@
-app.url: "https://lessonsbox.com/welcome"
+app:
+  url: https://lessonsbox.com/welcome
+cors:
+  origin: https://lessonsbox.com
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '[*]'
+server:
+  forward-headers-strategy: native
+  port: 8080
+  servlet:
+    context-path: /back
 spring:
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: 514342237226-c30rp9cusapgkm5osk37s9emkrreh5tl.apps.googleusercontent.com
-            client-secret: ${sm://projects/932424062751/secrets/google-oauth-secret}
-          facebook:
-            client-id: 1057163594670284
-            client-secret: ${sm://projects/932424062751/secrets/facebook-oauth-secret}
   cloud:
     gcp:
       sql:
         database-name: postgres
         instance-connection-name: or2-msq-epm-ldi-t1iylu:europe-west1:lessonsbox-db
-
   datasource:
-    username: postgres
     password: ${sm://projects/932424062751/secrets/db-pass}
-  level:
-    org.springframework.security: INFO
-
-cors:
-  origin: "https://lessonsbox.com"
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: ['*']
-server:
-  port: ${PORT}
-  servlet:
-    context-path: /back
-  forward-headers-strategy: native
-
-google.storage: 'NONE'
+    username: ${sm://projects/932424062751/secrets/db-user}
+  security:
+    oauth2:
+      client:
+        registration:
+          facebook:
+            client-id: 1057163594670284
+            client-secret: ${sm://projects/932424062751/secrets/facebook-oauth-secret}
+          google:
+            client-id: 514342237226-c30rp9cusapgkm5osk37s9emkrreh5tl.apps.googleusercontent.com
+            client-secret: ${sm://projects/932424062751/secrets/google-oauth-secret}

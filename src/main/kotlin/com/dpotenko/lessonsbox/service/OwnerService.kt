@@ -91,12 +91,12 @@ class OwnerService(val dslContext: DSLContext,
         }
     }
 
-    fun findCommentCreator(commentId: Long?): Long {
+    fun findCommentCreator(commentId: Long?): Long? {
         return dslContext.select(Tables.COMMENT.USER_ID)
                 .from(Tables.COMMENT)
                 .where(Tables.COMMENT.ID.eq(commentId))
                 .fetchOne()
-                .value1()
+                ?.value1()
     }
 
     fun checkIsAllowedToEditComment(commentId: Long?,

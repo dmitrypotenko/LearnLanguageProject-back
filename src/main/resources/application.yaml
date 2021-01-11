@@ -1,57 +1,44 @@
+app:
+  url: http://localhost:4200/welcome
+cors:
+  origin: http://localhost:4200
+management:
+  endpoints:
+    web:
+      exposure:
+        include: '[*]'
+server:
+  port: 8080
+  servlet:
+    session:
+      timeout: 1440m
 spring:
   cloud:
     gcp:
-      project-id: or2-msq-epm-ldi-t1iylu
       credentials:
         location: file:C:\projects\creds\EPM-LDI-5e253af63c24.json
-
+      project-id: or2-msq-epm-ldi-t1iylu
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres?sslmode=disable
   main:
     lazy-initialization: false
+  security:
+    oauth2:
+      client:
+        registration:
+          facebook:
+            client-id: 1048731185333188
+            client-secret: ${sm://projects/932424062751/secrets/facebook-local-oauth-secret}
+            scope: '[public_profile, email]'
+          google:
+            client-id: 514342237226-6kf495bld2ud832b5tesqsugokvcidf9.apps.googleusercontent.com
+            client-secret: ${sm://projects/932424062751/secrets/google-local-oauth-secret}
+  servlet:
+    multipart:
+      max-file-size: 5048576
   session:
     jdbc:
       initialize-schema: never
       schema: classpath:org/springframework/session/jdbc/schema-postgresql.sql
       table-name: SPRING_SESSION
     store-type: jdbc
-  security:
-    oauth2:
-      client:
-        registration:
-          google:
-            client-id: 514342237226-6kf495bld2ud832b5tesqsugokvcidf9.apps.googleusercontent.com
-            client-secret: ${sm://projects/932424062751/secrets/google-local-oauth-secret}
-          facebook:
-            client-id: 1048731185333188
-            client-secret: ${sm://projects/932424062751/secrets/facebook-local-oauth-secret}
-            scope: ["public_profile", "email"]
-
-  servlet:
-    multipart:
-      max-file-size: 5048576
-
-
-  datasource:
-    driver-class-name=com: org.postgresql.Driver
-    url: jdbc:postgresql://localhost:5432/postgres?sslmode=disable
-    username: postgres
-    password: 1111
-  level:
-    org.springframework.security: DEBUG
-
-
-cors:
-  origin: "http://localhost:4200"
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: ['*']
-
-server:
-  port: 8080
-  servlet:
-    session:
-      timeout: '1440m'
-
-app.url: "http://localhost:4200/welcome"

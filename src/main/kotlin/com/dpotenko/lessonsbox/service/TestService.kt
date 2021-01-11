@@ -140,7 +140,7 @@ class TestService(val dslContext: DSLContext,
     fun getTestById(testId: Long): TestDto {
         val test = dslContext.selectFrom(TEST)
                 .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
-                .fetchOneInto(Test::class.java)
+                .fetchOneInto(Test::class.java) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "The test with id $testId does not exist")
 
         return mapTestToDto(test)
 
@@ -190,7 +190,7 @@ class TestService(val dslContext: DSLContext,
                                userId: Long): TestDto {
         val test = dslContext.selectFrom(TEST)
                 .where(TEST.ID.eq(testId).and(TEST.DELETED.eq(false)))
-                .fetchOneInto(Test::class.java)
+                .fetchOneInto(Test::class.java) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "The test with id $testId does not exist")
 
         val testDto = mapTestToDto(test)
 

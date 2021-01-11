@@ -6,7 +6,9 @@ import com.dpotenko.lessonsbox.dto.LessonDto
 import com.dpotenko.lessonsbox.tables.pojos.CompletedLesson
 import com.dpotenko.lessonsbox.tables.pojos.Lesson
 import org.jooq.DSLContext
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Component
+import org.springframework.web.server.ResponseStatusException
 
 @Component
 class LessonService(val dslContext: DSLContext,
@@ -71,8 +73,7 @@ class LessonService(val dslContext: DSLContext,
     fun getLessonsById(id: Long): LessonDto {
         val lesson = dslContext.selectFrom(LESSON)
                 .where(LESSON.ID.eq(id).and(LESSON.DELETED.eq(false)))
-                .fetchOneInto(Lesson::class.java)
-
+                .fetchOneInto(Lesson::class.java) ?: throw ResponseStatusException(HttpStatus.NOT_FOUND, "The lessons with id $id does not exist")
 
         val lessonDto = mapLessonToDto(lesson)
         lessonDto.attachments = attachmentService.getAttachmentsByLessonId(lesson.id!!)

@@ -13,16 +13,18 @@ import com.dpotenko.lessonsbox.dto.UserDto
 import com.dpotenko.lessonsbox.tables.pojos.User
 import org.jooq.DSLContext
 import org.jooq.Record
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.web.server.ResponseStatusException
 
 @Service
 class UserService(private val dslContext: DSLContext) {
 
-    fun getUserInfo(userId: Long): UserDto {
+    fun getUserInfo(userId: Long): UserDto? {
         return dslContext.selectFrom(USER)
                 .where(USER.ID.eq(userId))
                 .fetchOneInto(User::class.java)
-                .let {
+                ?.let {
                     UserDto(
                             userId,
                             it.name,

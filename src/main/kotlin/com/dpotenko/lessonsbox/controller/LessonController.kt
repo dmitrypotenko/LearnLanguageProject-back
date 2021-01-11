@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RestController
 
 @RestController
 @RequestMapping("/lessons")
-class LessonController(val lessonService: LessonService, attachmentService: AttachmentService) {
+class LessonController(val lessonService: LessonService) {
 
     @PostMapping("/completed/{lessonId}")
     fun setAsCompleted(@PathVariable lessonId: Long, @AuthenticationPrincipal userPrincipal: UserPrincipal?): ResponseEntity<Void> {

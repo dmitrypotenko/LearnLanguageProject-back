@@ -7,7 +7,9 @@ import com.dpotenko.lessonsbox.service.UserService
 import com.dpotenko.lessonsbox.tables.pojos.Comment
 import org.jooq.DSLContext
 import org.jooq.Field
+import org.springframework.http.HttpStatus
 import org.springframework.stereotype.Service
+import org.springframework.web.server.ResponseStatusException
 import java.time.LocalDateTime
 
 @Service
@@ -15,17 +17,19 @@ class CommentService(private val dslContext: DSLContext,
                      private val userService: UserService) {
     fun save(comment: CommentDto,
              userId: Long): Long {
-        val newRecord = dslContext.newRecord(Tables.COMMENT, Comment(null, comment.commentText, LocalDateTime.now(), LocalDateTime.now(), userId, comment.threadId, false))
 
-        newRecord.insert()
-        comment.editable = true
-        comment.createDate = LocalDateTime.now()
-        comment.updateDate = LocalDateTime.now()
-        userService.getUserInfo(userId).let {
+        userService.getUserInfo(userId)?.let {
+            val newRecord = dslContext.newRecord(Tables.COMMENT, Comment(null, comment.commentText, LocalDateTime.now(), LocalDateTime.now(), userId, comment.threadId, false))
+
+            newRecord.insert()
+            comment.editable = true
+            comment.createDate = LocalDateTime.now()
+            comment.updateDate = LocalDateTime.now()
             comment.userPic = it.pictureUrl
             comment.userName = it.name
-        }
-        return newRecord.id
+            return newRecord.id
+        } ?: throw ResponseStatusException(HttpStatus.UNAUTHORIZED, "The user is not authorized")
+
     }
 
     fun delete(id: Long) {
