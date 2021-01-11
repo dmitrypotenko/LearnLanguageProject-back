@@ -57,7 +57,7 @@ class VariantService(val dslContext: DSLContext) {
                                     userId: Long): MutableList<VariantDto> {
         return dslContext.fetch("select variant.id, cv.id is not null as ticked, variant.wrong, variant.\"right\", variant.variant_text, variant.explanation,\n" +
                 "       variant.question_id,variant.deleted,variant.input_name, variant.input_type\n" +
-                "from variant left join chosen_variant cv on variant.id = cv.variant_id  and cv.user_id=? where variant.deleted=false and variant.question_id=?\n" +
+                "from principal.variant variant left join principal.chosen_variant cv on variant.id = cv.variant_id  and cv.user_id=? where variant.deleted=false and variant.question_id=?\n" +
                 "and (cv.user_id=? or cv.id is null)", userId, questionId, userId)
                 .map { record: Record -> record.into(Variant::class.java) }
                 .filterNot { variant -> variant.inputType == "input" && variant.ticked == false }
