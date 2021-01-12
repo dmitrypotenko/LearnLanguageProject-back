@@ -15,8 +15,6 @@ server:
 spring:
   cloud:
     gcp:
-      credentials:
-        location: file:C:\projects\creds\EPM-LDI-5e253af63c24.json
       project-id: or2-msq-epm-ldi-t1iylu
   datasource:
     url: jdbc:postgresql://localhost:5432/postgres?sslmode=disable
